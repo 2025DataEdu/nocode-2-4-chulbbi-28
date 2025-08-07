@@ -147,6 +147,12 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       sendMessage()
     }
   }
+  
+  const handleBackgroundClick = () => {
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }
 
   if (!isOpen && position === 'floating') {
     return (
@@ -169,7 +175,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     : "fixed bottom-4 right-4 w-[calc(100vw-2rem)] sm:w-80 h-[70vh] sm:h-96 shadow-elegant z-50 flex flex-col"
 
   return (
-    <Card className={cardClassName}>
+    <Card className={cardClassName} onClick={handleBackgroundClick}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-primary text-primary-foreground rounded-t-lg">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Bot className="h-4 w-4" />
@@ -185,8 +191,8 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
         </Button>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0">
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <CardContent className="flex-1 flex flex-col p-0" onClick={(e) => e.stopPropagation()}>
+        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef} onClick={handleBackgroundClick}>
           <div className="space-y-4">
             {messages.map((message) => (
               <div
