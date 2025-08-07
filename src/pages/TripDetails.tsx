@@ -129,18 +129,37 @@ export default function TripDetails() {
     return Math.round((elapsed / total) * 100)
   }
 
+  // 실제 날짜에 따른 현재 출장 상태 계산
+  const calculateRealStatus = () => {
+    if (!trip) return trip?.status || 'planned'
+    
+    const now = new Date()
+    const start = new Date(trip.start_date)
+    const end = new Date(trip.end_date)
+    
+    // 현재 날짜 기준으로 실제 상태 결정
+    if (now < start) {
+      return 'planned' // 아직 시작 전
+    } else if (now >= start && now <= end) {
+      return 'ongoing' // 진행 중
+    } else {
+      return 'completed' // 완료
+    }
+  }
+
   const getDaysRemaining = () => {
     if (!trip) return 0
     
     const now = new Date()
     const start = new Date(trip.start_date)
     const end = new Date(trip.end_date)
+    const realStatus = calculateRealStatus()
     
-    if (trip.status === 'ongoing') {
+    if (realStatus === 'ongoing') {
       // 진행중인 경우 종료까지의 날짜
       const diffTime = end.getTime() - now.getTime()
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    } else if (trip.status === 'planned') {
+    } else if (realStatus === 'planned') {
       // 예정인 경우 시작까지의 날짜
       const diffTime = start.getTime() - now.getTime()
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -152,7 +171,9 @@ export default function TripDetails() {
   const getDateLabel = () => {
     if (!trip) return ''
     
-    switch (trip.status) {
+    const realStatus = calculateRealStatus()
+    
+    switch (realStatus) {
       case 'ongoing':
         return '종료까지'
       case 'planned':
@@ -168,8 +189,9 @@ export default function TripDetails() {
     if (!trip) return ''
     
     const daysRemaining = getDaysRemaining()
+    const realStatus = calculateRealStatus()
     
-    switch (trip.status) {
+    switch (realStatus) {
       case 'ongoing':
         return daysRemaining > 0 ? `${daysRemaining}일` : '오늘 종료'
       case 'planned':
@@ -332,7 +354,7 @@ export default function TripDetails() {
               </p>
             </div>
             {/* 날짜 정보 - 완료된 경우만 숨김 */}
-            {trip.status !== 'completed' && (
+            {calculateRealStatus() !== 'completed' && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-muted-foreground text-caption">
                   <Clock className="h-4 w-4" />
@@ -346,7 +368,7 @@ export default function TripDetails() {
           </div>
 
           {/* 진행률 (진행중인 경우만) */}
-          {trip.status === 'ongoing' && (
+          {calculateRealStatus() === 'ongoing' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-caption text-muted-foreground">출장 진행률</span>
