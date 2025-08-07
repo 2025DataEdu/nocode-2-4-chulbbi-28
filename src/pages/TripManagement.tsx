@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { TripCard } from "@/components/TripCard"
 
-export default function TripManagement() {
+function TripManagement() {
   const [trips, setTrips] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -225,3 +225,5 @@ export default function TripManagement() {
     </div>
   )
 }
+
+export default TripManagement
