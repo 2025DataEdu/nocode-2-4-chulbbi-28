@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MessageSquare, Send, X, Bot, User } from "lucide-react"
+import { MessageSquare, Send, X, Bot, User, Trash2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/useAuth"
@@ -155,10 +155,24 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     // shift+enter는 줄바꿈으로 처리 (기본 동작 유지)
   }
   
-  const handleBackgroundClick = () => {
-    if (inputRef.current) {
-      inputRef.current.focus()
-    }
+  const handleClearChat = () => {
+    setMessages([{
+      id: '1',
+      content: `안녕하세요! 출장비서 출삐입니다! 🎯
+
+📋 **출삐 사용 가이드**
+출장 등록을 간편하게 할 수 있어요!
+
+💬 **사용 방법:**
+• 목적지: "서울 출장"
+• 일정: "2025년 8월 6일부터 8일까지 매일 9:00~18:00"
+
+이렇게 알려주시면 출장 규정을 확인해서 새 출장으로 등록해드릴게요! 
+
+출장 관련 궁금한 것이 있으시면 언제든 물어보세요! 😊`,
+      role: 'assistant',
+      timestamp: new Date()
+    }])
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -191,7 +205,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     : "fixed bottom-4 right-4 w-[calc(100vw-2rem)] sm:w-80 h-[500px] sm:h-[600px] max-h-[80vh] shadow-elegant z-50 flex flex-col"
 
   return (
-    <Card className={cardClassName} onClick={handleBackgroundClick}>
+    <Card className={cardClassName}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-primary text-primary-foreground rounded-t-lg">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Bot className="h-4 w-4" />
@@ -200,18 +214,18 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setIsOpen(false)}
+          onClick={handleClearChat}
           className="h-6 w-6 p-0 hover:bg-white/20"
+          title="대화 내역 지우기"
         >
-          <X className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" />
         </Button>
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col p-0" onClick={(e) => e.stopPropagation()}>
         <div 
           className="flex-1 overflow-y-auto p-4 space-y-4"
-          ref={scrollAreaRef} 
-          onClick={handleBackgroundClick}
+          ref={scrollAreaRef}
           style={{ maxHeight: 'calc(100% - 80px)' }}
         >
           {messages.map((message) => (
