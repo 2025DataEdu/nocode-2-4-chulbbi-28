@@ -172,7 +172,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
 
   const cardClassName = position === 'sidebar' 
     ? "w-full h-full shadow-none border-0 rounded-none flex flex-col"
-    : "fixed bottom-4 right-4 w-[calc(100vw-2rem)] sm:w-80 h-[70vh] sm:h-96 shadow-elegant z-50 flex flex-col"
+    : "fixed bottom-4 right-4 w-[calc(100vw-2rem)] sm:w-80 h-[500px] sm:h-[600px] max-h-[80vh] shadow-elegant z-50 flex flex-col"
 
   return (
     <Card className={cardClassName} onClick={handleBackgroundClick}>
