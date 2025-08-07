@@ -129,7 +129,7 @@ export function Dashboard() {
     <div className="min-h-screen bg-background">
       <TopNavigation />
       
-      <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in-up">
+      <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in-up pb-24">
       {/* 헤더 섹션 - 개선된 타이포그래피와 계층구조 */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -240,7 +240,7 @@ export function Dashboard() {
             ))}
           </div>
         ) : getActiveTrips().length > 0 ? (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 auto-rows-max">
             {getActiveTrips().map((trip, index) => (
               <div 
                 key={trip.id}
