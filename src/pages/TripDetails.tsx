@@ -339,145 +339,151 @@ export default function TripDetails() {
         longitude={coordinates?.lng} 
       />
 
-      {/* 편집 다이얼로그 */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          {/* 커스텀 오버레이 - 지도 위에도 표시되도록 */}
-          {isEditDialogOpen && (
-            <div className="fixed inset-0 bg-black/50 z-[9998]" style={{ pointerEvents: 'none' }} />
-          )}
-          <DialogHeader>
-            <DialogTitle>출장 정보 수정</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            {/* 목적지 */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="destination" className="text-right font-medium">
-                목적지
-              </label>
-              <Input
-                id="destination"
-                value={editForm.destination}
-                onChange={(e) => setEditForm(prev => ({ ...prev, destination: e.target.value }))}
-                className="col-span-3"
-                placeholder="목적지를 입력하세요"
-              />
-            </div>
-            
-            {/* 출발일 */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="start_date" className="text-right font-medium">
-                출발일
-              </label>
-              <Input
-                id="start_date"
-                type="date"
-                value={editForm.start_date}
-                onChange={(e) => setEditForm(prev => ({ ...prev, start_date: e.target.value }))}
-                className="col-span-3"
-              />
-            </div>
-            
-            {/* 종료일 */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="end_date" className="text-right font-medium">
-                종료일
-              </label>
-              <Input
-                id="end_date"
-                type="date"
-                value={editForm.end_date}
-                onChange={(e) => setEditForm(prev => ({ ...prev, end_date: e.target.value }))}
-                className="col-span-3"
-              />
-            </div>
-            
-            {/* 상태 */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="status" className="text-right font-medium">
-                상태
-              </label>
-              <Select
-                value={editForm.status}
-                onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value as any }))}
+      {/* 편집 다이얼로그 - 오버레이 없이 */}
+      {isEditDialogOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+          <div className="bg-background border rounded-lg shadow-2xl w-full max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-col space-y-1.5 text-center sm:text-left p-6 border-b">
+              <h2 className="text-lg font-semibold leading-none tracking-tight">출장 정보 수정</h2>
+              <button
+                onClick={() => setIsEditDialogOpen(false)}
+                className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
               >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="상태를 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planned">예정</SelectItem>
-                  <SelectItem value="ongoing">진행중</SelectItem>
-                  <SelectItem value="completed">완료</SelectItem>
-                  <SelectItem value="cancelled">취소됨</SelectItem>
-                </SelectContent>
-              </Select>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </button>
             </div>
             
-            {/* 예산 */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="budget" className="text-right font-medium">
-                예산
-              </label>
-              <Input
-                id="budget"
-                type="number"
-                value={editForm.budget}
-                onChange={(e) => setEditForm(prev => ({ ...prev, budget: e.target.value }))}
-                className="col-span-3"
-                placeholder="예산을 입력하세요 (원)"
-              />
+            <div className="grid gap-4 py-4 px-6">
+              {/* 목적지 */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="destination" className="text-right font-medium">
+                  목적지
+                </label>
+                <Input
+                  id="destination"
+                  value={editForm.destination}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, destination: e.target.value }))}
+                  className="col-span-3"
+                  placeholder="목적지를 입력하세요"
+                />
+              </div>
+              
+              {/* 출발일 */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="start_date" className="text-right font-medium">
+                  출발일
+                </label>
+                <Input
+                  id="start_date"
+                  type="date"
+                  value={editForm.start_date}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, start_date: e.target.value }))}
+                  className="col-span-3"
+                />
+              </div>
+              
+              {/* 종료일 */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="end_date" className="text-right font-medium">
+                  종료일
+                </label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={editForm.end_date}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, end_date: e.target.value }))}
+                  className="col-span-3"
+                />
+              </div>
+              
+              {/* 상태 */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="status" className="text-right font-medium">
+                  상태
+                </label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value as any }))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="상태를 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planned">예정</SelectItem>
+                    <SelectItem value="ongoing">진행중</SelectItem>
+                    <SelectItem value="completed">완료</SelectItem>
+                    <SelectItem value="cancelled">취소됨</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* 예산 */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="budget" className="text-right font-medium">
+                  예산
+                </label>
+                <Input
+                  id="budget"
+                  type="number"
+                  value={editForm.budget}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, budget: e.target.value }))}
+                  className="col-span-3"
+                  placeholder="예산을 입력하세요 (원)"
+                />
+              </div>
+              
+              {/* 목적 */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="purpose" className="text-right font-medium">
+                  목적
+                </label>
+                <Input
+                  id="purpose"
+                  value={editForm.purpose}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, purpose: e.target.value }))}
+                  className="col-span-3"
+                  placeholder="출장 목적을 입력하세요"
+                />
+              </div>
+              
+              {/* 메모 */}
+              <div className="grid grid-cols-4 items-start gap-4">
+                <label htmlFor="notes" className="text-right font-medium pt-2">
+                  메모
+                </label>
+                <Textarea
+                  id="notes"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                  className="col-span-3"
+                  placeholder="메모를 입력하세요"
+                  rows={4}
+                />
+              </div>
             </div>
             
-            {/* 목적 */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="purpose" className="text-right font-medium">
-                목적
-              </label>
-              <Input
-                id="purpose"
-                value={editForm.purpose}
-                onChange={(e) => setEditForm(prev => ({ ...prev, purpose: e.target.value }))}
-                className="col-span-3"
-                placeholder="출장 목적을 입력하세요"
-              />
-            </div>
-            
-            {/* 메모 */}
-            <div className="grid grid-cols-4 items-start gap-4">
-              <label htmlFor="notes" className="text-right font-medium pt-2">
-                메모
-              </label>
-              <Textarea
-                id="notes"
-                value={editForm.notes}
-                onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
-                className="col-span-3"
-                placeholder="메모를 입력하세요"
-                rows={4}
-              />
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-6 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={editLoading}
+                className="mt-2 sm:mt-0"
+              >
+                <X className="h-4 w-4 mr-2" />
+                취소
+              </Button>
+              <Button
+                onClick={handleEditSubmit}
+                disabled={editLoading}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {editLoading ? '저장 중...' : '저장'}
+              </Button>
             </div>
           </div>
-          
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-              disabled={editLoading}
-            >
-              <X className="h-4 w-4 mr-2" />
-              취소
-            </Button>
-            <Button
-              onClick={handleEditSubmit}
-              disabled={editLoading}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {editLoading ? '저장 중...' : '저장'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   )
 }
