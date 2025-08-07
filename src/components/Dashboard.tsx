@@ -251,7 +251,7 @@ export function Dashboard() {
         </div>
 
         {loading ? (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 auto-rows-max">
             {[1, 2, 3].map((i) => (
               <Card key={i} className="bg-gradient-card border-0 shadow-md animate-pulse">
                 <CardContent className="p-6">
@@ -266,19 +266,25 @@ export function Dashboard() {
             ))}
           </div>
         ) : getActiveTrips().length > 0 ? (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 auto-rows-max">
+          <div 
+            key={activeView} 
+            className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 auto-rows-max animate-fade-in"
+          >
             {getActiveTrips().map((trip, index) => (
               <div 
                 key={trip.id}
-                className="animate-slide-in-right"
-                style={{ animationDelay: `${index * 0.1}s` }}
+                className="animate-scale-in"
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <TripCard {...trip} />
               </div>
             ))}
           </div>
         ) : (
-          <Card className="bg-gradient-card border-0 shadow-md animate-fade-in-up">
+          <Card 
+            key={`empty-${activeView}`} 
+            className="bg-gradient-card border-0 shadow-md animate-fade-in"
+          >
             <CardContent className="p-12 text-center">
               <div className="space-y-6">
                 <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto shadow-lg">
