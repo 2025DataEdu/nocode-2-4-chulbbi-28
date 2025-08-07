@@ -112,7 +112,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       }
     } catch (error) {
       console.error('Chatbot error:', error)
-      toast.error('챗봇 오류: ' + (error as Error).message)
+      toast.error('챗봇 응답 중 오류가 발생했습니다. 다시 시도해주세요.')
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),

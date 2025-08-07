@@ -36,7 +36,7 @@ interface POI {
 export class OSMPOIService {
   private static readonly OVERPASS_API_URL = 'https://overpass-api.de/api/interpreter'
   
-  static async getNearbyPOIs(lat: number, lng: number, radiusKm: number = 2): Promise<POI[]> {
+  static async fetchNearbyPOIs(lat: number, lng: number, radiusKm: number = 2): Promise<POI[]> {
     try {
       // Overpass API 쿼리 - 반경 내의 레스토랑, 카페, 관광지 검색
       const query = `

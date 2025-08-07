@@ -47,15 +47,31 @@ export default function TripDetails() {
         .eq('user_id', user?.id)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching trip details:', error)
+        navigate('/')
+        return
+      }
+
+      if (!data) {
+        console.log('Trip not found')
+        navigate('/')
+        return
+      }
+
       setTrip(data)
       
-      // 좌표 가져오기
-      if (data?.destination) {
-        const coords = await GeocodingService.geocode(data.destination)
-        if (coords) {
-          setCoordinates({ lat: coords.lat, lng: coords.lng })
-        }
+      // 목적지 좌표 가져오기
+      console.log('Getting coordinates for:', data.destination)
+      const coords = await GeocodingService.geocode(data.destination)
+      console.log('Geocoding result:', coords)
+      
+      if (coords) {
+        setCoordinates({ lat: coords.lat, lng: coords.lng })
+      } else {
+        console.log('No coordinates found, using fallback')
+        // 기본 좌표 (서울)
+        setCoordinates({ lat: 37.5665, lng: 126.9780 })
       }
     } catch (error) {
       console.error('Error fetching trip details:', error)
@@ -245,8 +261,8 @@ export default function TripDetails() {
       {/* 지도 및 추천 장소 */}
       <TripDetailsMap 
         destination={trip.destination} 
-        lat={coordinates?.lat} 
-        lng={coordinates?.lng} 
+        latitude={coordinates?.lat} 
+        longitude={coordinates?.lng} 
       />
     </div>
   )
