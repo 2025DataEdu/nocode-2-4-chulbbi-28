@@ -4,13 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { TripDetailsMap } from '@/components/TripDetailsMap'
-import { ArrowLeft, Calendar, MapPin, Clock, Users, Edit3, Share2 } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, Clock, Users, Edit3, Share2, Save, X } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { GeocodingService } from '@/services/GeocodingService'
+import { useToast } from '@/hooks/use-toast'
 
 interface Trip {
   id: string
@@ -28,9 +33,21 @@ export default function TripDetails() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { toast } = useToast()
   const [trip, setTrip] = useState<Trip | null>(null)
   const [loading, setLoading] = useState(true)
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editForm, setEditForm] = useState({
+    destination: '',
+    start_date: '',
+    end_date: '',
+    purpose: '',
+    notes: '',
+    budget: '',
+    status: 'planned' as 'planned' | 'ongoing' | 'completed' | 'cancelled'
+  })
 
   useEffect(() => {
     if (id && user) {
@@ -123,6 +140,63 @@ export default function TripDetails() {
     return diffDays
   }
 
+  const openEditDialog = () => {
+    if (!trip) return
+    
+    setEditForm({
+      destination: trip.destination,
+      start_date: trip.start_date,
+      end_date: trip.end_date,
+      purpose: trip.purpose,
+      notes: trip.notes || '',
+      budget: trip.budget?.toString() || '',
+      status: trip.status
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditSubmit = async () => {
+    if (!trip || !user) return
+
+    setEditLoading(true)
+    try {
+      const { error } = await supabase
+        .from('trips')
+        .update({
+          destination: editForm.destination,
+          start_date: editForm.start_date,
+          end_date: editForm.end_date,
+          purpose: editForm.purpose,
+          notes: editForm.notes || null,
+          budget: editForm.budget ? parseFloat(editForm.budget) : null,
+          status: editForm.status
+        })
+        .eq('id', trip.id)
+        .eq('user_id', user.id)
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "출장 정보가 수정되었습니다",
+        description: "변경사항이 성공적으로 저장되었습니다."
+      })
+
+      setIsEditDialogOpen(false)
+      fetchTripDetails() // 데이터 새로고침
+    } catch (error) {
+      console.error('Error updating trip:', error)
+      toast({
+        title: "수정 실패",
+        description: "출장 정보 수정 중 오류가 발생했습니다.",
+        variant: "destructive"
+      })
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -171,7 +245,7 @@ export default function TripDetails() {
             <Share2 className="h-4 w-4 mr-2" />
             공유
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={openEditDialog}>
             <Edit3 className="h-4 w-4 mr-2" />
             수정
           </Button>
@@ -264,6 +338,142 @@ export default function TripDetails() {
         latitude={coordinates?.lat} 
         longitude={coordinates?.lng} 
       />
+
+      {/* 편집 다이얼로그 */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>출장 정보 수정</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            {/* 목적지 */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="destination" className="text-right font-medium">
+                목적지
+              </label>
+              <Input
+                id="destination"
+                value={editForm.destination}
+                onChange={(e) => setEditForm(prev => ({ ...prev, destination: e.target.value }))}
+                className="col-span-3"
+                placeholder="목적지를 입력하세요"
+              />
+            </div>
+            
+            {/* 출발일 */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="start_date" className="text-right font-medium">
+                출발일
+              </label>
+              <Input
+                id="start_date"
+                type="date"
+                value={editForm.start_date}
+                onChange={(e) => setEditForm(prev => ({ ...prev, start_date: e.target.value }))}
+                className="col-span-3"
+              />
+            </div>
+            
+            {/* 종료일 */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="end_date" className="text-right font-medium">
+                종료일
+              </label>
+              <Input
+                id="end_date"
+                type="date"
+                value={editForm.end_date}
+                onChange={(e) => setEditForm(prev => ({ ...prev, end_date: e.target.value }))}
+                className="col-span-3"
+              />
+            </div>
+            
+            {/* 상태 */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="status" className="text-right font-medium">
+                상태
+              </label>
+              <Select
+                value={editForm.status}
+                onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value as any }))}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="상태를 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="planned">예정</SelectItem>
+                  <SelectItem value="ongoing">진행중</SelectItem>
+                  <SelectItem value="completed">완료</SelectItem>
+                  <SelectItem value="cancelled">취소됨</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* 예산 */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="budget" className="text-right font-medium">
+                예산
+              </label>
+              <Input
+                id="budget"
+                type="number"
+                value={editForm.budget}
+                onChange={(e) => setEditForm(prev => ({ ...prev, budget: e.target.value }))}
+                className="col-span-3"
+                placeholder="예산을 입력하세요 (원)"
+              />
+            </div>
+            
+            {/* 목적 */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="purpose" className="text-right font-medium">
+                목적
+              </label>
+              <Input
+                id="purpose"
+                value={editForm.purpose}
+                onChange={(e) => setEditForm(prev => ({ ...prev, purpose: e.target.value }))}
+                className="col-span-3"
+                placeholder="출장 목적을 입력하세요"
+              />
+            </div>
+            
+            {/* 메모 */}
+            <div className="grid grid-cols-4 items-start gap-4">
+              <label htmlFor="notes" className="text-right font-medium pt-2">
+                메모
+              </label>
+              <Textarea
+                id="notes"
+                value={editForm.notes}
+                onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                className="col-span-3"
+                placeholder="메모를 입력하세요"
+                rows={4}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              disabled={editLoading}
+            >
+              <X className="h-4 w-4 mr-2" />
+              취소
+            </Button>
+            <Button
+              onClick={handleEditSubmit}
+              disabled={editLoading}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {editLoading ? '저장 중...' : '저장'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
