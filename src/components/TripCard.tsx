@@ -33,47 +33,46 @@ export function TripCard({
   const spentPercentage = budget > 0 ? (spent / budget) * 100 : 0
   
   return (
-    <Card className="group hover:shadow-medium transition-smooth cursor-pointer animate-fade-in">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-lg font-semibold truncate">
-            {destination}
-          </CardTitle>
-          <Badge variant={config.variant} className="shrink-0">
+    <Card className="group hover:shadow-medium transition-smooth cursor-pointer animate-fade-in border-0 shadow-soft">
+      <CardContent className="p-6">
+        {/* 헤더 - 목적지와 상태 */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-lg text-foreground truncate mb-1">
+              {destination}
+            </h3>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm text-muted-foreground">{type} 출장</span>
+            </div>
+          </div>
+          <Badge 
+            variant={config.variant} 
+            className="ml-2 text-xs font-medium"
+          >
             {config.label}
           </Badge>
         </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* 날짜 정보 */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <CalendarDays className="w-4 h-4" />
-          <span>{startDate} ~ {endDate}</span>
+        
+        {/* 날짜 */}
+        <div className="flex items-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
+          <CalendarDays className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">
+            {startDate} ~ {endDate}
+          </span>
         </div>
         
-        {/* 출장 타입 */}
-        <div className="flex items-center gap-2 text-sm">
-          <MapPin className="w-4 h-4 text-muted-foreground" />
-          <Badge variant="outline" className="text-xs">
-            {type} 출장
-          </Badge>
-        </div>
-        
-        {/* 예산 정보 */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <DollarSign className="w-4 h-4" />
-              <span>예산</span>
-            </div>
-            <span className="font-medium">
+        {/* 예산 정보 - 심플하게 */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">예산 사용</span>
+            <span className="text-sm font-semibold text-foreground">
               {spent.toLocaleString()}원 / {budget.toLocaleString()}원
             </span>
           </div>
           
-          {/* 예산 사용률 프로그레스 바 */}
-          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+          {/* 프로그레스 바 - 더 큰 사이즈 */}
+          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
             <div 
               className={`h-full transition-all duration-500 rounded-full ${
                 spentPercentage > 90 
@@ -86,15 +85,14 @@ export function TripCard({
             />
           </div>
           
-          <div className="text-xs text-muted-foreground text-right">
-            {spentPercentage.toFixed(1)}% 사용
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">
+              {spentPercentage.toFixed(0)}% 사용
+            </span>
+            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-smooth">
+              탭하여 자세히 보기 →
+            </span>
           </div>
-        </div>
-        
-        {/* 액션 힌트 */}
-        <div className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-smooth">
-          <Clock className="w-3 h-3" />
-          <span>클릭하여 상세보기</span>
         </div>
       </CardContent>
     </Card>

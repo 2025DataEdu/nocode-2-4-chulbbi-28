@@ -87,214 +87,140 @@ export function Dashboard() {
   ]
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* 헤더 섹션 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full min-w-0">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 truncate">
-            출장 관리
+    <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      {/* 헤더 섹션 - 트리플 스타일로 친근하게 */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            안녕하세요! 👋
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            출장을 효율적으로 관리하세요
-          </p>
+          <p className="text-muted-foreground">오늘도 즐거운 출장 되세요</p>
         </div>
-        
         <Button 
-          size="lg" 
-          className="bg-primary hover:bg-primary-hover text-primary-foreground hover:shadow-medium transition-smooth w-full sm:w-auto"
+          className="bg-gradient-primary hover:shadow-medium transition-smooth w-full sm:w-auto"
           onClick={() => navigate('/register')}
         >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-          <span className="text-sm sm:text-base">새 출장 등록</span>
+          <Plus className="mr-2 h-4 w-4" />
+          새 출장 계획
         </Button>
       </div>
 
-      {/* 통계 카드 섹션 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 w-full overflow-hidden">
-        {statsCards.map((stat, index) => (
-          <Card 
-            key={stat.title} 
-            className={`group hover:shadow-medium transition-smooth animate-scale-in`}
-            style={{ animationDelay: `${index * 0.1}s` }}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <div className="text-2xl font-bold text-foreground">
-                  {stat.value}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {stat.subtitle}
-                </div>
+      {/* 간단한 요약 통계 - 핵심 정보만 */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="bg-gradient-primary text-primary-foreground animate-fade-in hover:shadow-medium transition-smooth">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-primary-foreground/80 text-sm font-medium">진행중</p>
+                <p className="text-2xl font-bold">{ongoingTrips.length}건</p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <Calendar className="h-8 w-8 text-primary-foreground/80" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="animate-fade-in hover:shadow-medium transition-smooth" style={{ animationDelay: '0.1s' }}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-sm font-medium">방문 예정</p>
+                <p className="text-2xl font-bold text-foreground">{plannedTrips.length}건</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {plannedTrips.length > 0 ? plannedTrips.map(trip => trip.destination).slice(0, 2).join(', ') : '없음'}
+                </p>
+              </div>
+              <MapPin className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="animate-fade-in hover:shadow-medium transition-smooth sm:col-span-2 lg:col-span-1" style={{ animationDelay: '0.2s' }}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-sm font-medium">총 출장지</p>
+                <p className="text-2xl font-bold text-foreground">{new Set(trips.map(trip => trip.destination)).size}곳</p>
+                <p className="text-xs text-muted-foreground mt-1">완료: {completedTrips.length}건</p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 출장 관리 탭 */}
-      <Tabs value={activeView} onValueChange={(value: string) => setActiveView(value as 'ongoing' | 'planned' | 'completed' | 'all')} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 h-auto p-1">
-          <TabsTrigger value="ongoing" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-            <span className="hidden sm:inline">진행중</span>
-            <span className="sm:hidden">진행</span>
-            <span className="ml-1">({ongoingTrips.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="planned" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-            <span className="hidden sm:inline">예정</span>
-            <span className="sm:hidden">예정</span>
-            <span className="ml-1">({plannedTrips.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-            <span className="hidden sm:inline">완료</span>
-            <span className="sm:hidden">완료</span>
-            <span className="ml-1">({completedTrips.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="all" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-            <span className="hidden sm:inline">전체</span>
-            <span className="sm:hidden">전체</span>
-            <span className="ml-1">({totalTrips})</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeView} className="mt-6">
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="p-6">
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-muted rounded w-3/4"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                    <div className="h-3 bg-muted rounded w-2/3"></div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : getActiveTrips().length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {getActiveTrips().map((trip, index) => (
-                <div 
-                  key={trip.id}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <TripCard {...trip} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Card className="p-12 text-center">
-              <div className="space-y-4">
-                <Calendar className="h-16 w-16 text-muted-foreground mx-auto" />
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {activeView === 'ongoing' ? '진행중인 출장이 없습니다' :
-                     activeView === 'planned' ? '예정된 출장이 없습니다' :
-                     activeView === 'completed' ? '완료된 출장이 없습니다' :
-                     '등록된 출장이 없습니다'}
-                  </h3>
-                  <p className="text-muted-foreground mt-2">
-                    새로운 출장을 등록하여 시작해보세요
-                  </p>
-                </div>
-                <Button 
-                  className="bg-primary hover:bg-primary-hover text-primary-foreground hover:shadow-medium transition-smooth"
-                  onClick={() => navigate('/register')}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  출장 등록하기
-                </Button>
-              </div>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* 출장지 정보 및 추천 섹션 - 진행중인 출장이 있을 때만 표시 */}
-      {activeView === 'ongoing' && ongoingTrips.length > 0 && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-foreground">
-            출장지 정보 및 추천
-          </h2>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {/* 지도 섹션 */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                출장지 지도
-              </h3>
-              <div className="h-80 bg-muted rounded-lg flex items-center justify-center">
-                <div className="text-center space-y-2">
-                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto" />
-                  <p className="text-muted-foreground">지도 기능 준비중</p>
-                  <p className="text-sm text-muted-foreground">
-                    네이버 지도 API 연동 예정
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            {/* 추천 정보 섹션 */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">추천 정보</h3>
-              <div className="space-y-6">
-                {/* 숙소 추천 */}
-                <div>
-                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    추천 숙소
-                  </h4>
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-sm text-foreground font-medium">비즈니스 호텔 A</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      • 출장지에서 도보 5분 거리
-                      • 무료 WiFi 및 비즈니스 센터 완비
-                      • 조식 포함 (1박 120,000원)
-                    </p>
-                  </div>
-                </div>
-
-                {/* 식당 추천 */}
-                <div>
-                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
-                    <Utensils className="h-4 w-4" />
-                    비즈니스 미팅 적합 식당
-                  </h4>
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-sm text-foreground font-medium">한정식 레스토랑 B</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      • 조용한 분위기로 비즈니스 미팅에 적합
-                      • 개별 룸 예약 가능
-                      • 1인당 35,000원 (점심 코스)
-                    </p>
-                  </div>
-                </div>
-
-                {/* 관광지 추천 */}
-                <div>
-                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
-                    <Camera className="h-4 w-4" />
-                    주변 관광지
-                  </h4>
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-sm text-foreground font-medium">문화유적지 C</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      • 출장 여유시간에 방문 추천
-                      • 대중교통으로 15분 거리
-                      • 입장료 무료, 사진 촬영 가능
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
+      {/* 출장 목록 - 탭 대신 심플한 섹션 */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-foreground">내 출장</h2>
+          <Tabs value={activeView} onValueChange={(value: string) => setActiveView(value as 'ongoing' | 'planned' | 'completed' | 'all')} className="w-auto">
+            <TabsList className="grid grid-cols-4 h-9">
+              <TabsTrigger value="ongoing" className="text-xs px-2">
+                진행중
+              </TabsTrigger>
+              <TabsTrigger value="planned" className="text-xs px-2">
+                예정
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="text-xs px-2">
+                완료
+              </TabsTrigger>
+              <TabsTrigger value="all" className="text-xs px-2">
+                전체
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-      )}
+
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="p-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : getActiveTrips().length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {getActiveTrips().map((trip, index) => (
+              <div 
+                key={trip.id}
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <TripCard {...trip} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Card className="p-8 text-center animate-fade-in">
+            <div className="space-y-3">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                <Calendar className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground">
+                {activeView === 'ongoing' ? '진행중인 출장이 없어요' :
+                 activeView === 'planned' ? '예정된 출장이 없어요' :
+                 activeView === 'completed' ? '완료된 출장이 없어요' :
+                 '첫 출장을 계획해보세요'}
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                출삐와 함께 스마트한 출장을 시작해보세요
+              </p>
+              <Button 
+                className="bg-gradient-primary hover:shadow-medium transition-smooth mt-4"
+                onClick={() => navigate('/register')}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                출장 계획하기
+              </Button>
+            </div>
+          </Card>
+        )}
+      </div>
+
     </div>
   )
 }
