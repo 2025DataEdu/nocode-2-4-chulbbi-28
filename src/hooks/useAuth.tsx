@@ -40,39 +40,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string, userData: any) => {
-    const redirectUrl = `${window.location.origin}/`
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: userData
+    try {
+      const redirectUrl = `${window.location.origin}/`
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: userData
+        }
+      })
+      
+      if (error) {
+        toast.error("회원가입 실패: " + error.message)
+      } else {
+        toast.success("회원가입이 완료되었습니다!")
       }
-    })
-    
-    if (error) {
-      toast.error("회원가입 실패: " + error.message)
-    } else {
-      toast.success("회원가입이 완료되었습니다!")
+      
+      return { error }
+    } catch (error) {
+      console.error('SignUp error:', error)
+      toast.error("회원가입 중 오류가 발생했습니다.")
+      return { error }
     }
-    
-    return { error }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
-    
-    if (error) {
-      toast.error("로그인 실패: " + error.message)
-    } else {
-      toast.success("로그인되었습니다!")
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      
+      if (error) {
+        toast.error("로그인 실패: " + error.message)
+      } else {
+        toast.success("로그인되었습니다!")
+      }
+      
+      return { error }
+    } catch (error) {
+      console.error('SignIn error:', error)
+      toast.error("로그인 중 오류가 발생했습니다.")
+      return { error }
     }
-    
-    return { error }
   }
 
   const signOut = async () => {
