@@ -6,14 +6,16 @@ import { TripCard } from "./TripCard"
 import { Plus, BarChart3, Calendar, MapPin, Building, Utensils, Camera } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
+import { useNavigate } from "react-router-dom"
 
 
 
 export function Dashboard() {
   const [trips, setTrips] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeView, setActiveView] = useState('ongoing')
+  const [activeView, setActiveView] = useState<'ongoing' | 'planned' | 'completed' | 'all'>('ongoing')
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (user) {
@@ -99,8 +101,8 @@ export function Dashboard() {
         
         <Button 
           size="lg" 
-          className="bg-gradient-primary hover:shadow-medium transition-smooth"
-          onClick={() => window.location.href = '/register'}
+          className="bg-primary hover:bg-primary-hover text-primary-foreground hover:shadow-medium transition-smooth"
+          onClick={() => navigate('/register')}
         >
           <Plus className="w-5 h-5 mr-2" />
           새 출장 등록
@@ -136,7 +138,7 @@ export function Dashboard() {
       </div>
 
       {/* 출장 관리 탭 */}
-      <Tabs value={activeView} onValueChange={setActiveView}>
+      <Tabs value={activeView} onValueChange={(value: string) => setActiveView(value as 'ongoing' | 'planned' | 'completed' | 'all')}>
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="ongoing">진행중 ({ongoingTrips.length})</TabsTrigger>
           <TabsTrigger value="planned">예정 ({plannedTrips.length})</TabsTrigger>
@@ -184,8 +186,8 @@ export function Dashboard() {
                   </p>
                 </div>
                 <Button 
-                  className="bg-gradient-primary hover:shadow-medium transition-smooth"
-                  onClick={() => window.location.href = '/register'}
+                  className="bg-primary hover:bg-primary-hover text-primary-foreground hover:shadow-medium transition-smooth"
+                  onClick={() => navigate('/register')}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   출장 등록하기
