@@ -155,7 +155,7 @@ export default function TripDetails() {
             variant="ghost"
             size="sm"
             onClick={() => navigate('/')}
-            className="hover:bg-muted/50"
+            className="hover:bg-muted hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             돌아가기
