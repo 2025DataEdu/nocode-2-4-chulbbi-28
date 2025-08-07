@@ -341,7 +341,11 @@ export default function TripDetails() {
 
       {/* 편집 다이얼로그 */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] z-[9999]">
+        <DialogContent className="sm:max-w-[600px]">
+          {/* 커스텀 오버레이 - 지도 위에도 표시되도록 */}
+          {isEditDialogOpen && (
+            <div className="fixed inset-0 bg-black/50 z-[9998]" style={{ pointerEvents: 'none' }} />
+          )}
           <DialogHeader>
             <DialogTitle>출장 정보 수정</DialogTitle>
           </DialogHeader>
