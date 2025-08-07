@@ -9,6 +9,7 @@ interface TripCardProps {
   start_date: string
   end_date: string
   status: 'planned' | 'ongoing' | 'completed' | 'cancelled'
+  realStatus?: 'planned' | 'ongoing' | 'completed' | 'cancelled'
   budget?: number
   spent?: number
   purpose?: string
@@ -28,12 +29,14 @@ export function TripCard({
   start_date, 
   end_date, 
   status, 
+  realStatus,
   budget = 0, 
   spent = 0, 
   purpose = "출장"
 }: TripCardProps) {
   const navigate = useNavigate()
-  const config = statusConfig[status] || statusConfig.planned
+  const actualStatus = realStatus || status
+  const config = statusConfig[actualStatus] || statusConfig.planned
   const spentPercentage = budget > 0 ? (spent / budget) * 100 : 0
   
   const handleCardClick = (e: React.MouseEvent) => {

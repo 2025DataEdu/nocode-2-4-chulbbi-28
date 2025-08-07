@@ -79,9 +79,35 @@ export function Dashboard() {
     }
   }
 
-  const ongoingTrips = trips.filter(trip => trip.status === 'ongoing')
-  const plannedTrips = trips.filter(trip => trip.status === 'planned')
-  const completedTrips = trips.filter(trip => trip.status === 'completed')
+  // 현재 날짜 기준으로 출장 상태 계산
+  const calculateTripStatus = (startDate: string, endDate: string) => {
+    const today = new Date()
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    
+    // 시간 부분을 제거하고 날짜만 비교
+    today.setHours(0, 0, 0, 0)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(0, 0, 0, 0)
+    
+    if (today < start) {
+      return 'planned'
+    } else if (today >= start && today <= end) {
+      return 'ongoing'
+    } else {
+      return 'completed'
+    }
+  }
+
+  // 출장 데이터에 실제 상태 적용
+  const tripsWithRealStatus = trips.map(trip => ({
+    ...trip,
+    realStatus: calculateTripStatus(trip.start_date, trip.end_date)
+  }))
+
+  const ongoingTrips = tripsWithRealStatus.filter(trip => trip.realStatus === 'ongoing')
+  const plannedTrips = tripsWithRealStatus.filter(trip => trip.realStatus === 'planned')
+  const completedTrips = tripsWithRealStatus.filter(trip => trip.realStatus === 'completed')
   const totalTrips = trips.length
 
   const getActiveTrips = () => {
@@ -89,7 +115,7 @@ export function Dashboard() {
       case 'ongoing': return ongoingTrips
       case 'planned': return plannedTrips
       case 'completed': return completedTrips
-      case 'all': return trips
+      case 'all': return tripsWithRealStatus
       default: return ongoingTrips
     }
   }
@@ -104,7 +130,7 @@ export function Dashboard() {
     },
     {
       title: "등록된 출장지",
-      value: new Set(trips.map(trip => trip.destination)).size.toString(),
+      value: new Set(tripsWithRealStatus.map(trip => trip.destination)).size.toString(),
       subtitle: "곳",
       icon: MapPin,
       variant: "secondary" as const,
@@ -188,7 +214,7 @@ export function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-muted-foreground text-caption font-medium">총 출장지</p>
-                <p className="text-title font-bold text-foreground">{new Set(trips.map(trip => trip.destination)).size}곳</p>
+                <p className="text-title font-bold text-foreground">{new Set(tripsWithRealStatus.map(trip => trip.destination)).size}곳</p>
                 <p className="text-xs text-muted-foreground mt-1">완료: {completedTrips.length}건</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-success-light flex items-center justify-center">
