@@ -102,10 +102,10 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
         // 출장이 성공적으로 저장된 경우 토스트 표시
         if (data.tripSaved) {
           toast.success('출장이 성공적으로 등록되었습니다!')
-          // 출장 목록 새로고침을 위해 페이지 새로고침 (더 나은 방법은 상태 관리 사용)
+          // 대시보드 업데이트 이벤트 발송
           setTimeout(() => {
-            window.location.reload()
-          }, 2000)
+            window.dispatchEvent(new CustomEvent('tripUpdated'))
+          }, 1000)
         }
       } else {
         throw new Error(data.error || '응답을 받을 수 없습니다.')

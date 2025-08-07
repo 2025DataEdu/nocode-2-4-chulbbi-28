@@ -23,6 +23,18 @@ export function Dashboard() {
     }
   }, [user])
 
+  // 출장 업데이트 이벤트 리스너
+  useEffect(() => {
+    const handleTripUpdate = () => {
+      if (user) {
+        fetchTrips()
+      }
+    }
+
+    window.addEventListener('tripUpdated', handleTripUpdate)
+    return () => window.removeEventListener('tripUpdated', handleTripUpdate)
+  }, [user])
+
   const fetchTrips = async () => {
     try {
       console.log('Fetching trips for user:', user?.id);
