@@ -528,7 +528,8 @@ export default function Register() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fade-in w-full px-2 sm:px-4 lg:px-0">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in w-full px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
       {/* 헤더 */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -540,31 +541,32 @@ export default function Register() {
       </div>
 
       {/* 진행 단계 표시 */}
-      <div className="flex items-center justify-center space-x-2 sm:space-x-4 p-4 sm:p-6 bg-card border border-border rounded-lg shadow-sm overflow-x-auto"
-        style={{ scrollBehavior: 'smooth' }}>
-        {steps.map((step, index) => (
-          <div key={step.id} className="flex items-center">
-            <div className={`flex items-center justify-center w-8 sm:w-10 h-8 sm:h-10 rounded-full transition-smooth ${
-              currentStep >= step.id 
-                ? 'bg-gradient-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground'
-            }`}>
-              <span className="text-sm sm:text-lg">{step.emoji}</span>
-            </div>
-            <div className="ml-2 sm:ml-3 hidden md:block">
-              <p className={`text-xs sm:text-sm font-medium ${
-                currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'
+      <div className="flex items-center justify-center gap-1 sm:gap-2 p-2 sm:p-4 bg-card border border-border rounded-lg shadow-sm w-full">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0 w-full overflow-x-auto">
+          {steps.map((step, index) => (
+            <div key={step.id} className="flex items-center shrink-0">
+              <div className={`flex items-center justify-center w-6 sm:w-8 h-6 sm:h-8 rounded-full transition-smooth ${
+                currentStep >= step.id 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground'
               }`}>
-                {step.title}
-              </p>
+                <span className="text-xs sm:text-sm">{step.emoji}</span>
+              </div>
+              <div className="ml-1 sm:ml-2 hidden md:block min-w-0">
+                <p className={`text-xs font-medium truncate ${
+                  currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'
+                }`}>
+                  {step.title}
+                </p>
+              </div>
+              {index < steps.length - 1 && (
+                <div className={`w-3 sm:w-8 h-px mx-1 sm:mx-2 transition-smooth ${
+                  currentStep > step.id ? 'bg-primary' : 'bg-border'
+                }`} />
+              )}
             </div>
-            {index < steps.length - 1 && (
-              <div className={`w-6 sm:w-12 h-px mx-2 sm:mx-4 transition-smooth ${
-                currentStep > step.id ? 'bg-primary' : 'bg-border'
-              }`} />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* 메인 폼 카드 */}
@@ -594,7 +596,13 @@ export default function Register() {
         {currentStep < 5 ? (
           <Button 
             onClick={handleNext}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial"
+            disabled={
+              (currentStep === 1 && (!formData.departure || !formData.destination || !formData.purpose || !formData.startDate || (!formData.isDayTrip && !formData.endDate))) ||
+              (currentStep === 2 && !formData.transport) ||
+              (currentStep === 3 && !formData.tripType) ||
+              (currentStep === 4 && formData.accommodationNeeded && !formData.accommodationType)
+            }
+            className="bg-primary text-primary-foreground hover:bg-primary/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial disabled:opacity-50"
           >
             <span className="hidden sm:inline">다음</span>
             <span className="sm:hidden">다음</span>
@@ -603,7 +611,16 @@ export default function Register() {
         ) : (
           <Button 
             onClick={handleSave}
-            disabled={isLoading}
+            disabled={isLoading || 
+              !formData.departure || 
+              !formData.destination || 
+              !formData.purpose || 
+              !formData.startDate || 
+              (!formData.isDayTrip && !formData.endDate) ||
+              !formData.transport ||
+              !formData.tripType ||
+              (formData.accommodationNeeded && !formData.accommodationType)
+            }
             className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial disabled:opacity-50"
           >
             <Save className="w-4 h-4 mr-2" />
@@ -611,6 +628,7 @@ export default function Register() {
             <span className="sm:hidden">{isLoading ? '저장중' : '저장'}</span>
           </Button>
         )}
+      </div>
       </div>
     </div>
   )
