@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
+import { TopNavigation } from "@/components/TopNavigation"
 import { Calendar, MapPin, Car, Building, ArrowRight, Save } from "lucide-react"
 
 const locations = [
@@ -498,7 +499,8 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen bg-background">
+      <TopNavigation />
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-fade-in w-full px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
       {/* 헤더 */}
       <div className="text-center">
