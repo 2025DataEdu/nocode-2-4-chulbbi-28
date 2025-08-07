@@ -38,24 +38,21 @@ export function TopNavigation() {
         {/* 네비게이션 메뉴 */}
         <nav className="flex items-center gap-2">
           {navigationItems.map((item) => (
-            <Button
+            <NavLink 
               key={item.title}
-              asChild
-              variant="ghost"
-              size="sm"
-              className="h-10"
+              to={item.url} 
+              end 
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-smooth h-10 ${
+                  isActive 
+                    ? "bg-gradient-primary text-primary-foreground shadow-sm" 
+                    : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                }`
+              }
             >
-              <NavLink 
-                to={item.url} 
-                end 
-                className={getNavClassName}
-              >
-                <div className="flex items-center gap-2">
-                  <item.icon className="h-4 w-4" />
-                  <span className="font-medium">{item.title}</span>
-                </div>
-              </NavLink>
-            </Button>
+              <item.icon className="h-4 w-4" />
+              <span>{item.title}</span>
+            </NavLink>
           ))}
         </nav>
 
