@@ -17,10 +17,10 @@ interface TripCardProps {
 }
 
 const statusConfig = {
-  planned: { label: '계획됨', variant: 'secondary' as const },
-  ongoing: { label: '진행중', variant: 'default' as const },
-  completed: { label: '완료', variant: 'outline' as const },
-  cancelled: { label: '취소됨', variant: 'destructive' as const }
+  planned: { label: "예정", variant: "secondary" as const },
+  ongoing: { label: "진행중", variant: "default" as const },
+  completed: { label: "완료", variant: "outline" as const },
+  cancelled: { label: "취소됨", variant: "destructive" as const }
 }
 
 export function TripCard({ 
