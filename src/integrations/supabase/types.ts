@@ -97,6 +97,7 @@ export type Database = {
           end_date: string
           end_time: string | null
           id: string
+          notes: string | null
           purpose: string
           spent: number | null
           start_date: string
@@ -118,6 +119,7 @@ export type Database = {
           end_date: string
           end_time?: string | null
           id?: string
+          notes?: string | null
           purpose: string
           spent?: number | null
           start_date: string
@@ -139,6 +141,7 @@ export type Database = {
           end_date?: string
           end_time?: string | null
           id?: string
+          notes?: string | null
           purpose?: string
           spent?: number | null
           start_date?: string
