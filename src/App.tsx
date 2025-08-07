@@ -55,15 +55,15 @@ function AppContent() {
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      {/* 챗봇 사이드바 */}
-      <div className="w-80 border-r border-border bg-card">
+    <div className="flex h-screen w-full bg-background overflow-hidden">
+      {/* 챗봇 사이드바 - 고정 위치 */}
+      <div className="w-80 h-full border-r border-border bg-card flex-shrink-0 overflow-hidden">
         <Chatbot isOpen={true} position="sidebar" />
       </div>
       
-      <div className="flex-1 flex flex-col">
-        {/* 메인 콘텐츠 */}
-        <main className="flex-1 overflow-auto">
+      {/* 메인 콘텐츠 영역 - 독립적 스크롤 */}
+      <div className="flex-1 h-full flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
