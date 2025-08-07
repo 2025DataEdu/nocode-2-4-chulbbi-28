@@ -173,10 +173,10 @@ export default function Receipts() {
     }
   };
 
-  // 검색 및 필터링
+  // 검색 및 필터링 (안전한 접근)
   const filteredReceipts = receipts.filter(receipt => {
-    const matchesSearch = receipt.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         receipt.trips?.destination.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (receipt.description?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (receipt.trips?.destination?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     
     const matchesCategory = selectedCategory === 'all' || receipt.category === selectedCategory;
     
@@ -401,7 +401,7 @@ export default function Receipts() {
                           {categoryLabels[receipt.category] || receipt.category}
                         </Badge>
                         <span className="text-caption text-muted-foreground">
-                          {receipt.trips?.destination} • {new Date(receipt.receipt_date).toLocaleDateString('ko-KR')}
+                          {receipt.trips?.destination || '출장지 정보 없음'} • {new Date(receipt.receipt_date).toLocaleDateString('ko-KR')}
                         </span>
                       </div>
                       <p className="font-medium text-foreground">{receipt.description || '설명 없음'}</p>

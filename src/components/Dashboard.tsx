@@ -82,19 +82,25 @@ export function Dashboard() {
     }
   };
 
-  // 현재 날짜 기준으로 출장 상태 계산
+  // 현재 날짜 기준으로 출장 상태 계산 (한국시간 기준)
   const calculateTripStatus = (startDate: string, endDate: string) => {
     const today = new Date();
+    // 한국시간으로 변환 (UTC+9)
+    const koreanOffset = 9 * 60;
+    const utc = today.getTime() + (today.getTimezoneOffset() * 60000);
+    const koreanTime = new Date(utc + (koreanOffset * 60000));
+    
     const start = new Date(startDate);
     const end = new Date(endDate);
 
     // 시간 부분을 제거하고 날짜만 비교
-    today.setHours(0, 0, 0, 0);
+    koreanTime.setHours(0, 0, 0, 0);
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
-    if (today < start) {
+    
+    if (koreanTime < start) {
       return 'planned';
-    } else if (today >= start && today <= end) {
+    } else if (koreanTime >= start && koreanTime <= end) {
       return 'ongoing';
     } else {
       return 'completed';

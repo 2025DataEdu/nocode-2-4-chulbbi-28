@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Chatbot } from "@/components/Chatbot";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
 import Manage from "./pages/Manage";
@@ -37,6 +38,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { user, loading } = useAuth()
+  const { isOffline } = useNetworkStatus()
   
   if (loading) {
     return (
@@ -56,14 +58,21 @@ function AppContent() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
+    <div className="flex h-screen w-full bg-background overflow-hidden relative">
+      {/* 오프라인 상태 표시 */}
+      {isOffline && (
+        <div className="absolute top-0 left-0 right-0 bg-destructive text-destructive-foreground text-center py-2 text-sm font-medium z-50">
+          ⚠️ 인터넷 연결이 끊어졌습니다. 일부 기능이 제한될 수 있습니다.
+        </div>
+      )}
+      
       {/* 챗봇 사이드바 - 고정 위치 */}
-      <div className="w-80 h-full border-r border-border bg-card flex-shrink-0 overflow-hidden">
+      <div className={`w-80 h-full border-r border-border bg-card flex-shrink-0 overflow-hidden ${isOffline ? 'mt-10' : ''}`}>
         <Chatbot isOpen={true} position="sidebar" />
       </div>
       
       {/* 메인 콘텐츠 영역 - 독립적 스크롤 */}
-      <div className="flex-1 h-full flex flex-col overflow-hidden">
+      <div className={`flex-1 h-full flex flex-col overflow-hidden ${isOffline ? 'mt-10' : ''}`}>
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <Routes>
             <Route path="/" element={<Index />} />

@@ -106,6 +106,11 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       console.log('Sending message to chatbot:', inputMessage)
       console.log('User ID:', user?.id)
       
+      // 네트워크 연결 확인
+      if (!navigator.onLine) {
+        throw new Error('인터넷 연결을 확인해주세요')
+      }
+      
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: {
           message: inputMessage.trim(),
@@ -146,15 +151,29 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       }
     } catch (error) {
       console.error('Chatbot error:', error)
-      toast.error('챗봇 응답 중 오류가 발생했습니다. 다시 시도해주세요.')
       
-      const errorMessage: Message = {
+      // 에러 메시지 개선
+      let errorMessage = '죄송합니다. 현재 서비스에 문제가 있습니다. 잠시 후 다시 시도해주세요.'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('인터넷 연결')) {
+          errorMessage = '인터넷 연결을 확인해주세요.'
+        } else if (error.message.includes('timeout')) {
+          errorMessage = '응답 시간이 초과되었습니다. 다시 시도해주세요.'
+        } else if (error.message.includes('NetworkError')) {
+          errorMessage = '네트워크 오류가 발생했습니다. 연결 상태를 확인해주세요.'
+        }
+      }
+      
+      toast.error(errorMessage)
+      
+      const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: '죄송합니다. 현재 서비스에 문제가 있습니다. 잠시 후 다시 시도해주세요.',
+        content: errorMessage,
         role: 'assistant',
         timestamp: new Date()
       }
-      setMessages(prev => [...prev, errorMessage])
+      setMessages(prev => [...prev, errorResponse])
     } finally {
       setIsLoading(false)
     }
