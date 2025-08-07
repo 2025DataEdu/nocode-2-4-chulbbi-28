@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import { TopNavigation } from "@/components/TopNavigation"
-import { Calendar, MapPin, Car, Building, ArrowRight, Save } from "lucide-react"
+import { Calendar, MapPin, Car, Building, ArrowRight, Save, X } from "lucide-react"
 
 const locations = [
   { value: 'seoul-jung', label: '서울특별시 중구', region: 'seoul' },
@@ -94,6 +94,10 @@ export default function Register() {
 
   const handleBack = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1)
+  }
+
+  const handleCancel = () => {
+    navigate('/')
   }
 
   const handleSave = async () => {
@@ -555,15 +559,26 @@ export default function Register() {
       </Card>
 
       {/* 네비게이션 버튼 */}
-      <div className="flex justify-between gap-4 w-full">
-        <Button 
-          variant="outline" 
-          onClick={handleBack}
-          disabled={currentStep === 1}
-          className="border-primary/20 hover:bg-primary/5 hover:border-primary/40 transition-smooth flex-1 sm:flex-initial"
-        >
-          이전
-        </Button>
+      <div className="flex justify-between gap-2 w-full">
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleBack}
+            disabled={currentStep === 1}
+            className="border-primary/20 hover:bg-primary/5 hover:border-primary/40 transition-smooth"
+          >
+            이전
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            onClick={handleCancel}
+            className="border-destructive/20 hover:bg-destructive/5 hover:border-destructive/40 text-destructive hover:text-destructive transition-smooth"
+          >
+            <X className="w-4 h-4 mr-2" />
+            취소하기
+          </Button>
+        </div>
         
         {currentStep < 4 ? (
           <Button 
@@ -573,7 +588,7 @@ export default function Register() {
               (currentStep === 2 && !formData.transport) ||
               (currentStep === 3 && formData.accommodationNeeded && !formData.accommodationType)
             }
-            className="bg-primary text-primary-foreground hover:bg-primary/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial disabled:opacity-50"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 transition-smooth shadow-sm hover:shadow-md disabled:opacity-50"
           >
             <span className="hidden sm:inline">다음</span>
             <span className="sm:hidden">다음</span>
@@ -591,7 +606,7 @@ export default function Register() {
               !formData.transport ||
               (formData.accommodationNeeded && !formData.accommodationType)
             }
-            className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial disabled:opacity-50"
+            className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth shadow-sm hover:shadow-md disabled:opacity-50"
           >
             <Save className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">{isLoading ? '저장 중...' : '저장하기'}</span>
