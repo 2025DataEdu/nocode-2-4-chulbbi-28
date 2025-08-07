@@ -23,6 +23,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           user_type: Database["public"]["Enums"]["user_type"]
+          username: string | null
         }
         Insert: {
           base_location: string
@@ -32,6 +33,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           user_type: Database["public"]["Enums"]["user_type"]
+          username?: string | null
         }
         Update: {
           base_location?: string
@@ -41,6 +43,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           user_type?: Database["public"]["Enums"]["user_type"]
+          username?: string | null
         }
         Relationships: []
       }
@@ -159,7 +162,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_username_availability: {
+        Args: { username_to_check: string }
+        Returns: boolean
+      }
     }
     Enums: {
       receipt_category: "교통비" | "숙박비" | "식비" | "기타"

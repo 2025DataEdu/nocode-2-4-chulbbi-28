@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/hooks/useAuth"
-import { Eye, EyeOff, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, AlertCircle, Check, X } from "lucide-react"
+import { supabase } from "@/integrations/supabase/client"
 
 const locations = [
   "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시", 
@@ -20,8 +21,10 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
+  const [usernameChecking, setUsernameChecking] = useState(false)
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
     userType: "",
     organization: "",
@@ -29,34 +32,66 @@ export default function Auth() {
   })
   const { signIn, signUp, loading } = useAuth()
   const navigate = useNavigate()
+  const checkUsernameAvailability = async () => {
+    if (!formData.username.trim()) return
+    
+    setUsernameChecking(true)
+    try {
+      const { data, error } = await supabase.rpc('check_username_availability', {
+        username_to_check: formData.username
+      })
+      
+      if (error) {
+        console.error('Username check error:', error)
+        setUsernameAvailable(null)
+      } else {
+        setUsernameAvailable(data)
+      }
+    } catch (error) {
+      console.error('Username check error:', error)
+      setUsernameAvailable(null)
+    } finally {
+      setUsernameChecking(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     
+    // 아이디를 이메일 형식으로 변환 (Supabase Auth 호환)
+    const emailForAuth = `${formData.username}@app.local`
+    
     if (isLogin) {
-      const { error } = await signIn(formData.email, formData.password)
+      const { error } = await signIn(emailForAuth, formData.password)
       if (error) {
         if (error.message === "Email not confirmed") {
-          setError("이메일 확인이 필요합니다. 가입 시 사용한 이메일을 확인해주세요.")
+          setError("이메일 확인이 필요합니다. 관리자에게 문의하세요.")
         } else {
-          setError("로그인에 실패했습니다: " + error.message)
+          setError("로그인에 실패했습니다: 아이디 또는 비밀번호를 확인해주세요.")
         }
       } else {
         navigate("/")
       }
     } else {
       if (!formData.userType || !formData.organization || !formData.baseLocation) {
+        setError("모든 필드를 입력해주세요.")
+        return
+      }
+      
+      if (usernameAvailable !== true) {
+        setError("아이디 중복체크를 완료해주세요.")
         return
       }
       
       const userData = {
         user_type: formData.userType,
         organization: formData.organization,
-        base_location: formData.baseLocation
+        base_location: formData.baseLocation,
+        username: formData.username
       }
       
-      const { error } = await signUp(formData.email, formData.password, userData)
+      const { error } = await signUp(emailForAuth, formData.password, userData)
       if (error) {
         setError("회원가입에 실패했습니다: " + error.message)
       } else {
@@ -84,15 +119,49 @@ export default function Auth() {
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">이메일</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                required
-              />
+              <Label htmlFor="username">아이디</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="아이디를 입력하세요"
+                  value={formData.username}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, username: e.target.value }))
+                    setUsernameAvailable(null)
+                  }}
+                  required
+                />
+                {!isLogin && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={checkUsernameAvailability}
+                    disabled={!formData.username.trim() || usernameChecking}
+                    className="whitespace-nowrap"
+                  >
+                    {usernameChecking ? "확인중..." : "중복체크"}
+                  </Button>
+                )}
+              </div>
+              {!isLogin && usernameAvailable !== null && (
+                <div className={`flex items-center gap-1 text-sm ${
+                  usernameAvailable ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {usernameAvailable ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      사용 가능한 아이디입니다
+                    </>
+                  ) : (
+                    <>
+                      <X className="h-4 w-4" />
+                      이미 사용중인 아이디입니다
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -178,8 +247,9 @@ export default function Auth() {
                 onClick={() => {
                   setIsLogin(!isLogin)
                   setError("")
+                  setUsernameAvailable(null)
                   setFormData({
-                    email: "",
+                    username: "",
                     password: "",
                     userType: "",
                     organization: "",
