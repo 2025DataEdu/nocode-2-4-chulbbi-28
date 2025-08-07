@@ -3,8 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+import { Chatbot } from "@/components/Chatbot";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
@@ -53,43 +52,24 @@ function AppContent() {
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-background">
-        <AppSidebar />
-        
-        <div className="flex-1 flex flex-col">
-          {/* 헤더 */}
-          <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40 w-full overflow-hidden">
-            <div className="flex items-center justify-between h-full px-4 sm:px-6">
-              <div className="flex items-center gap-2 sm:gap-4">
-                <SidebarTrigger className="hover:bg-muted transition-smooth" />
-                <div className="hidden sm:block">
-                  <h2 className="font-semibold text-foreground text-sm sm:text-base">출장비서 출삐</h2>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 sm:gap-4">
-                <div className="text-xs sm:text-sm text-muted-foreground">
-                  환영합니다!
-                </div>
-              </div>
-            </div>
-          </header>
-
-          {/* 메인 콘텐츠 */}
-          <main className="flex-1 p-4 sm:p-6 overflow-auto w-full min-w-0">
-            <div className="max-w-7xl mx-auto w-full min-w-0">
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/trip/:id" element={<TripDetails />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </div>
-          </main>
-        </div>
+    <div className="flex min-h-screen w-full bg-background">
+      {/* 챗봇 사이드바 */}
+      <div className="w-80 border-r border-border bg-card">
+        <Chatbot isOpen={true} position="sidebar" />
       </div>
-    </SidebarProvider>
+      
+      <div className="flex-1 flex flex-col">
+        {/* 메인 콘텐츠 */}
+        <main className="flex-1 overflow-auto">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/trip/:id" element={<TripDetails />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
   )
 }
 

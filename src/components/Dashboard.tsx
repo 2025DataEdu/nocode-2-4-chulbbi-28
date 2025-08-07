@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
+import { TopNavigation } from "@/components/TopNavigation"
 
 
 
@@ -125,7 +126,10 @@ export function Dashboard() {
   ]
 
   return (
-    <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in-up">
+    <div className="min-h-screen bg-background">
+      <TopNavigation />
+      
+      <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in-up">
       {/* 헤더 섹션 - 개선된 타이포그래피와 계층구조 */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -280,6 +284,7 @@ export function Dashboard() {
         )}
       </div>
 
+      </div>
     </div>
   )
 }
