@@ -55,12 +55,9 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
   } : setInternalIsOpen
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
-      if (scrollContainer) {
-        setTimeout(() => {
-          scrollContainer.scrollTop = scrollContainer.scrollHeight
-        }, 100)
-      }
+      setTimeout(() => {
+        scrollAreaRef.current!.scrollTop = scrollAreaRef.current!.scrollHeight
+      }, 100)
     }
   }
 
@@ -211,57 +208,60 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col p-0" onClick={(e) => e.stopPropagation()}>
-        <ScrollArea className="flex-1 h-0 min-h-0" ref={scrollAreaRef} onClick={handleBackgroundClick}>
-          <div className="p-4 space-y-4 min-h-full">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-2 ${
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                {message.role === 'assistant' && (
-                  <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                    <Bot className="h-4 w-4 text-primary-foreground" />
-                  </div>
-                )}
-                
-                <div
-                  className={`max-w-[200px] sm:max-w-[240px] p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${
-                    message.role === 'user'
-                      ? 'bg-gradient-primary text-primary-foreground ml-1 sm:ml-2'
-                      : 'bg-muted text-foreground'
-                  }`}
-                >
-                  {message.content}
-                </div>
-
-                {message.role === 'user' && (
-                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            ))}
-            
-            {isLoading && (
-              <div className="flex gap-2 justify-start">
+        <div 
+          className="flex-1 overflow-y-auto p-4 space-y-4"
+          ref={scrollAreaRef} 
+          onClick={handleBackgroundClick}
+          style={{ maxHeight: 'calc(100% - 80px)' }}
+        >
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex gap-2 ${
+                message.role === 'user' ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              {message.role === 'assistant' && (
                 <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
                   <Bot className="h-4 w-4 text-primary-foreground" />
                 </div>
-                <div className="bg-muted p-3 rounded-lg text-sm">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"></div>
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
+              )}
+              
+              <div
+                className={`max-w-[200px] sm:max-w-[240px] p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${
+                  message.role === 'user'
+                    ? 'bg-gradient-primary text-primary-foreground ml-1 sm:ml-2'
+                    : 'bg-muted text-foreground'
+                }`}
+              >
+                {message.content}
+              </div>
+
+              {message.role === 'user' && (
+                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {isLoading && (
+            <div className="flex gap-2 justify-start">
+              <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
+                <Bot className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <div className="bg-muted p-3 rounded-lg text-sm">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"></div>
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
-            )}
-          </div>
-        </ScrollArea>
+            </div>
+          )}
+        </div>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border flex-shrink-0">
           <div className="flex gap-2">
             <textarea
               ref={inputRef}
