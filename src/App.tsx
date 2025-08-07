@@ -53,22 +53,22 @@ function AppContent() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-background">
         <AppSidebar />
         
         <div className="flex-1 flex flex-col">
           {/* 헤더 */}
-          <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
-            <div className="flex items-center justify-between h-full px-6">
-              <div className="flex items-center gap-4">
+          <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40 w-full overflow-hidden">
+            <div className="flex items-center justify-between h-full px-4 sm:px-6">
+              <div className="flex items-center gap-2 sm:gap-4">
                 <SidebarTrigger className="hover:bg-muted transition-smooth" />
                 <div className="hidden sm:block">
-                  <h2 className="font-semibold text-foreground">출장비서 출삐</h2>
+                  <h2 className="font-semibold text-foreground text-sm sm:text-base">출장비서 출삐</h2>
                 </div>
               </div>
               
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   환영합니다!
                 </div>
               </div>
@@ -76,8 +76,8 @@ function AppContent() {
           </header>
 
           {/* 메인 콘텐츠 */}
-          <main className="flex-1 p-6 overflow-auto">
-            <div className="max-w-7xl mx-auto">
+          <main className="flex-1 p-4 sm:p-6 overflow-auto w-full min-w-0">
+            <div className="max-w-7xl mx-auto w-full min-w-0">
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/register" element={<Register />} />

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@/test/test-utils'
+import { render } from '@/test/test-utils'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { Dashboard } from '../Dashboard'
 
 // Mock useNavigate

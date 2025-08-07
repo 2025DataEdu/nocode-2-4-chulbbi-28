@@ -38,8 +38,8 @@ export function AppSidebar() {
       : "hover:bg-muted/60 transition-smooth"
 
   return (
-    <Sidebar className={`${collapsed ? "w-16" : "w-64"} transition-smooth border-r border-border bg-card`}>
-      <SidebarContent className="p-4">
+    <Sidebar className={`${collapsed ? "w-14 sm:w-16" : "w-48 sm:w-64"} transition-smooth border-r border-border bg-card`}>
+      <SidebarContent className="p-2 sm:p-4">
         {/* Logo/Brand */}
         <div className="mb-6 px-2">
           {!collapsed ? (

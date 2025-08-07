@@ -89,28 +89,28 @@ export function Dashboard() {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* 헤더 섹션 */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full min-w-0">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 truncate">
             출장 관리
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             출장을 효율적으로 관리하세요
           </p>
         </div>
         
         <Button 
           size="lg" 
-          className="bg-primary hover:bg-primary-hover text-primary-foreground hover:shadow-medium transition-smooth"
+          className="bg-primary hover:bg-primary-hover text-primary-foreground hover:shadow-medium transition-smooth w-full sm:w-auto"
           onClick={() => navigate('/register')}
         >
-          <Plus className="w-5 h-5 mr-2" />
-          새 출장 등록
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+          <span className="text-sm sm:text-base">새 출장 등록</span>
         </Button>
       </div>
 
       {/* 통계 카드 섹션 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 w-full overflow-hidden">
         {statsCards.map((stat, index) => (
           <Card 
             key={stat.title} 
@@ -138,12 +138,28 @@ export function Dashboard() {
       </div>
 
       {/* 출장 관리 탭 */}
-      <Tabs value={activeView} onValueChange={(value: string) => setActiveView(value as 'ongoing' | 'planned' | 'completed' | 'all')}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="ongoing">진행중 ({ongoingTrips.length})</TabsTrigger>
-          <TabsTrigger value="planned">예정 ({plannedTrips.length})</TabsTrigger>
-          <TabsTrigger value="completed">완료 ({completedTrips.length})</TabsTrigger>
-          <TabsTrigger value="all">전체 ({totalTrips})</TabsTrigger>
+      <Tabs value={activeView} onValueChange={(value: string) => setActiveView(value as 'ongoing' | 'planned' | 'completed' | 'all')} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 h-auto p-1">
+          <TabsTrigger value="ongoing" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <span className="hidden sm:inline">진행중</span>
+            <span className="sm:hidden">진행</span>
+            <span className="ml-1">({ongoingTrips.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="planned" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <span className="hidden sm:inline">예정</span>
+            <span className="sm:hidden">예정</span>
+            <span className="ml-1">({plannedTrips.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <span className="hidden sm:inline">완료</span>
+            <span className="sm:hidden">완료</span>
+            <span className="ml-1">({completedTrips.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="all" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <span className="hidden sm:inline">전체</span>
+            <span className="sm:hidden">전체</span>
+            <span className="ml-1">({totalTrips})</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeView} className="mt-6">
@@ -160,7 +176,7 @@ export function Dashboard() {
               ))}
             </div>
           ) : getActiveTrips().length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {getActiveTrips().map((trip, index) => (
                 <div 
                   key={trip.id}
@@ -205,7 +221,7 @@ export function Dashboard() {
             출장지 정보 및 추천
           </h2>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* 지도 섹션 */}
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">

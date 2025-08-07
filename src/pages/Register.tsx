@@ -175,7 +175,7 @@ export default function Register() {
                 </Label>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="startDate">출발일</Label>
                   <Input
@@ -281,7 +281,7 @@ export default function Register() {
               </Card>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Card 
                 className={`cursor-pointer transition-smooth hover:shadow-medium ${
                   formData.tripType === 'internal' ? 'ring-2 ring-primary bg-primary/5' : ''
@@ -381,7 +381,7 @@ export default function Register() {
 
             <Card>
               <CardContent className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                       <MapPin className="w-4 h-4" />
@@ -463,7 +463,7 @@ export default function Register() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fade-in w-full px-2 sm:px-4 lg:px-0">
       {/* 헤더 */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -475,25 +475,26 @@ export default function Register() {
       </div>
 
       {/* 진행 단계 표시 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-center space-x-2 sm:space-x-4 p-4 sm:p-6 bg-card border border-border rounded-lg shadow-sm overflow-x-auto"
+        style={{ scrollBehavior: 'smooth' }}>
         {steps.map((step, index) => (
           <div key={step.id} className="flex items-center">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-smooth ${
+            <div className={`flex items-center justify-center w-8 sm:w-10 h-8 sm:h-10 rounded-full transition-smooth ${
               currentStep >= step.id 
                 ? 'bg-gradient-primary text-primary-foreground' 
                 : 'bg-muted text-muted-foreground'
             }`}>
-              <span className="text-lg">{step.emoji}</span>
+              <span className="text-sm sm:text-lg">{step.emoji}</span>
             </div>
-            <div className="ml-3 hidden sm:block">
-              <p className={`text-sm font-medium ${
+            <div className="ml-2 sm:ml-3 hidden md:block">
+              <p className={`text-xs sm:text-sm font-medium ${
                 currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'
               }`}>
                 {step.title}
               </p>
             </div>
             {index < steps.length - 1 && (
-              <div className={`w-12 h-px mx-4 transition-smooth ${
+              <div className={`w-6 sm:w-12 h-px mx-2 sm:mx-4 transition-smooth ${
                 currentStep > step.id ? 'bg-primary' : 'bg-border'
               }`} />
             )}
@@ -502,25 +503,25 @@ export default function Register() {
       </div>
 
       {/* 메인 폼 카드 */}
-      <Card className="shadow-medium">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <span className="text-xl">{steps[currentStep - 1].emoji}</span>
-            {steps[currentStep - 1].title}
+      <Card className="shadow-medium w-full overflow-hidden">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <span className="text-lg sm:text-xl">{steps[currentStep - 1].emoji}</span>
+            <span className="truncate">{steps[currentStep - 1].title}</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6 w-full min-w-0">
           {renderStepContent()}
         </CardContent>
       </Card>
 
       {/* 네비게이션 버튼 */}
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-4 w-full">
         <Button 
           variant="outline" 
           onClick={handleBack}
           disabled={currentStep === 1}
-          className="border-primary/20 hover:bg-primary/5 hover:border-primary/40 transition-smooth"
+          className="border-primary/20 hover:bg-primary/5 hover:border-primary/40 transition-smooth flex-1 sm:flex-initial"
         >
           이전
         </Button>
@@ -528,16 +529,19 @@ export default function Register() {
         {currentStep < 5 ? (
           <Button 
             onClick={handleNext}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 transition-smooth shadow-sm hover:shadow-md"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial"
           >
-            다음 <ArrowRight className="w-4 h-4 ml-2" />
+            <span className="hidden sm:inline">다음</span>
+            <span className="sm:hidden">다음</span>
+            <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         ) : (
           <Button 
-            className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth shadow-sm hover:shadow-md"
+            className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial"
           >
             <Save className="w-4 h-4 mr-2" />
-            저장하기
+            <span className="hidden sm:inline">저장하기</span>
+            <span className="sm:hidden">저장</span>
           </Button>
         )}
       </div>

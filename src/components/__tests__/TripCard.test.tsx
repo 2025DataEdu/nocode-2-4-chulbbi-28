@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@/test/test-utils'
+import { render } from '@/test/test-utils'
+import { screen } from '@testing-library/react'
 import { TripCard } from '../TripCard'
 
 const mockTripData = {
