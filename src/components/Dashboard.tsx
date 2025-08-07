@@ -248,16 +248,32 @@ export function Dashboard() {
           </div>
           <Tabs value={activeView} onValueChange={(value: string) => setActiveView(value as 'ongoing' | 'planned' | 'completed' | 'all')} className="w-auto">
             <TabsList className="grid grid-cols-4 h-10 bg-muted/50 p-1 rounded-lg">
-              <TabsTrigger value="ongoing" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger 
+                value="ongoing" 
+                className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                onMouseEnter={() => setActiveView('ongoing')}
+              >
                 진행중
               </TabsTrigger>
-              <TabsTrigger value="planned" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger 
+                value="planned" 
+                className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                onMouseEnter={() => setActiveView('planned')}
+              >
                 예정
               </TabsTrigger>
-              <TabsTrigger value="completed" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger 
+                value="completed" 
+                className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                onMouseEnter={() => setActiveView('completed')}
+              >
                 완료
               </TabsTrigger>
-              <TabsTrigger value="all" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger 
+                value="all" 
+                className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                onMouseEnter={() => setActiveView('all')}
+              >
                 전체
               </TabsTrigger>
             </TabsList>
