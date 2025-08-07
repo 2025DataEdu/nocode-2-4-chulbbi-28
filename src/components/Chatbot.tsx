@@ -125,10 +125,10 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     return (
       <Button
         onClick={() => setInternalIsOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-primary hover:shadow-medium transition-smooth z-50"
+        className="fixed bottom-4 right-4 h-12 w-12 sm:h-14 sm:w-14 sm:bottom-6 sm:right-6 rounded-full bg-gradient-primary hover:shadow-medium transition-smooth z-50"
         size="lg"
       >
-        <MessageSquare className="h-6 w-6" />
+        <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
     )
   }
@@ -138,8 +138,8 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
   }
 
   const cardClassName = position === 'sidebar' 
-    ? "fixed bottom-20 left-6 w-80 h-96 shadow-elegant z-50 flex flex-col"
-    : "fixed bottom-6 right-6 w-80 h-96 shadow-elegant z-50 flex flex-col"
+    ? "fixed bottom-4 left-4 w-[calc(100vw-2rem)] sm:w-80 h-[70vh] sm:h-96 shadow-elegant z-50 flex flex-col md:bottom-20 md:left-6"
+    : "fixed bottom-4 right-4 w-[calc(100vw-2rem)] sm:w-80 h-[70vh] sm:h-96 shadow-elegant z-50 flex flex-col"
 
   return (
     <Card className={cardClassName}>
@@ -175,9 +175,9 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
                 )}
                 
                 <div
-                  className={`max-w-[240px] p-3 rounded-lg text-sm ${
+                  className={`max-w-[200px] sm:max-w-[240px] p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${
                     message.role === 'user'
-                      ? 'bg-gradient-primary text-primary-foreground ml-2'
+                      ? 'bg-gradient-primary text-primary-foreground ml-1 sm:ml-2'
                       : 'bg-muted text-foreground'
                   }`}
                 >

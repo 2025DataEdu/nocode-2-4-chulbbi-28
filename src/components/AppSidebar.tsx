@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { Home, Plus, FileText, MessageSquare, Settings, BarChart3 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { Chatbot } from "@/components/Chatbot"
@@ -28,6 +29,7 @@ export function AppSidebar() {
   const location = useLocation()
   const currentPath = location.pathname
   const collapsed = state === "collapsed"
+  const isMobile = useIsMobile()
 
   const isActive = (path: string) => currentPath === path
   const isExpanded = navigationItems.some((item) => isActive(item.url))
@@ -111,7 +113,7 @@ export function AppSidebar() {
       <Chatbot 
         isOpen={isChatbotOpen} 
         onClose={() => setIsChatbotOpen(false)}
-        position="sidebar"
+        position={isMobile ? "floating" : "sidebar"}
       />
     </Sidebar>
   )
