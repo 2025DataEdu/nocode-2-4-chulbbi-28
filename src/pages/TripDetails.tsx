@@ -133,11 +133,52 @@ export default function TripDetails() {
     if (!trip) return 0
     
     const now = new Date()
+    const start = new Date(trip.start_date)
     const end = new Date(trip.end_date)
-    const diffTime = end.getTime() - now.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     
-    return diffDays
+    if (trip.status === 'ongoing') {
+      // 진행중인 경우 종료까지의 날짜
+      const diffTime = end.getTime() - now.getTime()
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    } else if (trip.status === 'planned') {
+      // 예정인 경우 시작까지의 날짜
+      const diffTime = start.getTime() - now.getTime()
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    }
+    
+    return 0 // 완료된 경우는 0
+  }
+
+  const getDateLabel = () => {
+    if (!trip) return ''
+    
+    switch (trip.status) {
+      case 'ongoing':
+        return '종료까지'
+      case 'planned':
+        return '시작까지'
+      case 'completed':
+        return null // 완료된 경우 표시하지 않음
+      default:
+        return '시작까지'
+    }
+  }
+
+  const getDateValue = () => {
+    if (!trip) return ''
+    
+    const daysRemaining = getDaysRemaining()
+    
+    switch (trip.status) {
+      case 'ongoing':
+        return daysRemaining > 0 ? `${daysRemaining}일` : '오늘 종료'
+      case 'planned':
+        return daysRemaining > 0 ? `${daysRemaining}일` : '오늘 시작'
+      case 'completed':
+        return null // 완료된 경우 표시하지 않음
+      default:
+        return daysRemaining > 0 ? `${daysRemaining}일` : '오늘'
+    }
   }
 
   const openEditDialog = () => {
@@ -290,18 +331,18 @@ export default function TripDetails() {
                 {format(new Date(trip.end_date), 'MM월 dd일 (E)', { locale: ko })}
               </p>
             </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-muted-foreground text-caption">
-                <Clock className="h-4 w-4" />
-                {trip.status === 'completed' ? '완료됨' : 
-                 trip.status === 'ongoing' ? '남은 기간' : '시작까지'}
+            {/* 날짜 정보 - 완료된 경우만 숨김 */}
+            {trip.status !== 'completed' && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-muted-foreground text-caption">
+                  <Clock className="h-4 w-4" />
+                  {getDateLabel()}
+                </div>
+                <p className="font-medium text-foreground">
+                  {getDateValue()}
+                </p>
               </div>
-              <p className="font-medium text-foreground">
-                {trip.status === 'completed' ? '출장 완료' :
-                 daysRemaining > 0 ? `${daysRemaining}일` : '오늘'}
-              </p>
-            </div>
+            )}
           </div>
 
           {/* 진행률 (진행중인 경우만) */}
