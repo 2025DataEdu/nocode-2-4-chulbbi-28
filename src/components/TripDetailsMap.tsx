@@ -95,23 +95,31 @@ export function TripDetailsMap({ destination, latitude, longitude }: TripDetails
 
       // POI 데이터 가져오기
       try {
-        setLoading(true)
-        console.log('Fetching POIs for coordinates:', lat, lng)
-        const poisData = await OSMPOIService.fetchNearbyPOIs(lat, lng)
-        console.log('Fetched POIs:', poisData)
-        setPois(poisData)
+        if (destination && latitude && longitude) {
+          setLoading(true)
+          console.log('Fetching POIs for coordinates:', lat, lng)
+          const poisData = await OSMPOIService.fetchNearbyPOIs(lat, lng)
+          console.log('Fetched POIs:', poisData)
+          setPois(Array.isArray(poisData) ? poisData : [])
 
-        // POI 마커 추가
-        poisData.forEach((poi) => {
-          const icon = getMarkerIcon(poi.type)
-          const poiMarker = L.marker([poi.lat, poi.lng], { icon })
-            .addTo(mapInstance!)
-            .bindPopup(`<b>${poi.name}</b><br>${poi.type}<br>${poi.description || ''}`)
-          
-          markers.push(poiMarker)
-        })
+          // POI 마커 추가
+          if (Array.isArray(poisData)) {
+            poisData.forEach((poi) => {
+              const icon = getMarkerIcon(poi.type)
+              const poiMarker = L.marker([poi.lat, poi.lng], { icon })
+                .addTo(mapInstance!)
+                .bindPopup(`<b>${poi.name}</b><br>${poi.type}<br>${poi.description || ''}`)
+              
+              markers.push(poiMarker)
+            })
+          }
+        } else {
+          console.log('Missing destination or coordinates, skipping POI fetch')
+          setPois([])
+        }
       } catch (error) {
         console.error('Error fetching POIs:', error)
+        setPois([]);
         // 에러 시 fallback 데이터 표시
         const fallbackPois: POI[] = [
           {
@@ -136,6 +144,16 @@ export function TripDetailsMap({ destination, latitude, longitude }: TripDetails
           }
         ]
         setPois(fallbackPois)
+        
+        // Fallback POI 마커 추가
+        fallbackPois.forEach((poi) => {
+          const icon = getMarkerIcon(poi.type)
+          const poiMarker = L.marker([poi.lat, poi.lng], { icon })
+            .addTo(mapInstance!)
+            .bindPopup(`<b>${poi.name}</b><br>${poi.type}<br>${poi.description || ''}`)
+          
+          markers.push(poiMarker)
+        })
       } finally {
         setLoading(false)
       }
