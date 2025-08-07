@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TripCard } from "./TripCard"
 import { Plus, BarChart3, Calendar, MapPin, Building, Utensils, Camera } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
@@ -11,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth"
 export function Dashboard() {
   const [trips, setTrips] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeView, setActiveView] = useState('ongoing')
   const { user } = useAuth()
 
   useEffect(() => {
@@ -25,7 +27,6 @@ export function Dashboard() {
         .from('trips')
         .select('*')
         .eq('user_id', user?.id)
-        .eq('status', 'ongoing')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -38,7 +39,19 @@ export function Dashboard() {
   }
 
   const ongoingTrips = trips.filter(trip => trip.status === 'ongoing')
+  const plannedTrips = trips.filter(trip => trip.status === 'planned')
+  const completedTrips = trips.filter(trip => trip.status === 'completed')
   const totalTrips = trips.length
+
+  const getActiveTrips = () => {
+    switch(activeView) {
+      case 'ongoing': return ongoingTrips
+      case 'planned': return plannedTrips
+      case 'completed': return completedTrips
+      case 'all': return trips
+      default: return ongoingTrips
+    }
+  }
 
   const statsCards = [
     {
@@ -56,8 +69,15 @@ export function Dashboard() {
       variant: "secondary" as const,
     },
     {
-      title: "총 출장 건수",
-      value: totalTrips.toString(), 
+      title: "예정된 출장",
+      value: plannedTrips.length.toString(),
+      subtitle: "건", 
+      icon: Calendar,
+      variant: "accent" as const,
+    },
+    {
+      title: "완료된 출장",
+      value: completedTrips.length.toString(),
       subtitle: "건",
       icon: BarChart3,
       variant: "accent" as const,
@@ -70,10 +90,10 @@ export function Dashboard() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            진행중인 출장
+            출장 관리
           </h1>
           <p className="text-muted-foreground">
-            현재 진행중인 출장을 관리하고 계획하세요
+            출장을 효율적으로 관리하세요
           </p>
         </div>
         
@@ -115,61 +135,69 @@ export function Dashboard() {
         ))}
       </div>
 
-      {/* 진행중인 출장 섹션 */}
-      <div className="space-y-6">
-        <h2 className="text-2xl font-semibold text-foreground">
-          진행중인 출장
-        </h2>
+      {/* 출장 관리 탭 */}
+      <Tabs value={activeView} onValueChange={setActiveView}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="ongoing">진행중 ({ongoingTrips.length})</TabsTrigger>
+          <TabsTrigger value="planned">예정 ({plannedTrips.length})</TabsTrigger>
+          <TabsTrigger value="completed">완료 ({completedTrips.length})</TabsTrigger>
+          <TabsTrigger value="all">전체 ({totalTrips})</TabsTrigger>
+        </TabsList>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="p-6">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : ongoingTrips.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ongoingTrips.map((trip, index) => (
-              <div 
-                key={trip.id}
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <TripCard {...trip} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Card className="p-12 text-center">
-            <div className="space-y-4">
-              <Calendar className="h-16 w-16 text-muted-foreground mx-auto" />
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  진행중인 출장이 없습니다
-                </h3>
-                <p className="text-muted-foreground mt-2">
-                  새로운 출장을 등록하여 시작해보세요
-                </p>
-              </div>
-              <Button 
-                className="bg-gradient-primary hover:shadow-medium transition-smooth"
-                onClick={() => window.location.href = '/register'}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                첫 출장 등록하기
-              </Button>
+        <TabsContent value={activeView} className="mt-6">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="p-6">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 bg-muted rounded w-3/4"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                    <div className="h-3 bg-muted rounded w-2/3"></div>
+                  </div>
+                </Card>
+              ))}
             </div>
-          </Card>
-        )}
-      </div>
+          ) : getActiveTrips().length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {getActiveTrips().map((trip, index) => (
+                <div 
+                  key={trip.id}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <TripCard {...trip} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-12 text-center">
+              <div className="space-y-4">
+                <Calendar className="h-16 w-16 text-muted-foreground mx-auto" />
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {activeView === 'ongoing' ? '진행중인 출장이 없습니다' :
+                     activeView === 'planned' ? '예정된 출장이 없습니다' :
+                     activeView === 'completed' ? '완료된 출장이 없습니다' :
+                     '등록된 출장이 없습니다'}
+                  </h3>
+                  <p className="text-muted-foreground mt-2">
+                    새로운 출장을 등록하여 시작해보세요
+                  </p>
+                </div>
+                <Button 
+                  className="bg-gradient-primary hover:shadow-medium transition-smooth"
+                  onClick={() => window.location.href = '/register'}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  출장 등록하기
+                </Button>
+              </div>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
-      {/* 출장지 정보 및 추천 섹션 */}
-      {ongoingTrips.length > 0 && (
+      {/* 출장지 정보 및 추천 섹션 - 진행중인 출장이 있을 때만 표시 */}
+      {activeView === 'ongoing' && ongoingTrips.length > 0 && (
         <div className="space-y-6">
           <h2 className="text-2xl font-semibold text-foreground">
             출장지 정보 및 추천
