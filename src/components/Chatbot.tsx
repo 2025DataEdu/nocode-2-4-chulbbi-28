@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageSquare, Send, X, Bot, User } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
+import { useAuth } from "@/hooks/useAuth"
 
 interface ChatbotProps {
   isOpen?: boolean
@@ -21,6 +22,7 @@ interface Message {
 }
 
 export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, position = 'floating' }: ChatbotProps = {}) {
+  const { user } = useAuth()
   const [internalIsOpen, setInternalIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -77,6 +79,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: {
           message: inputMessage,
+          userId: user?.id,
           context: {
             previousMessages: messages.slice(-5) // 최근 5개 메시지만 컨텍스트로 전송
           }
@@ -95,6 +98,15 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
           timestamp: new Date()
         }
         setMessages(prev => [...prev, assistantMessage])
+        
+        // 출장이 성공적으로 저장된 경우 토스트 표시
+        if (data.tripSaved) {
+          toast.success('출장이 성공적으로 등록되었습니다!')
+          // 출장 목록 새로고침을 위해 페이지 새로고침 (더 나은 방법은 상태 관리 사용)
+          setTimeout(() => {
+            window.location.reload()
+          }, 2000)
+        }
       } else {
         throw new Error(data.error || '응답을 받을 수 없습니다.')
       }

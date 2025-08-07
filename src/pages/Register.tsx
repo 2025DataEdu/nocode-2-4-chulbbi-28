@@ -131,13 +131,20 @@ export default function Register() {
         notes: formData.specialRequirements || null
       }
 
-      const { error } = await supabase
+      console.log('Saving trip data:', tripData);
+      
+      const { data: savedTrip, error } = await supabase
         .from('trips')
         .insert([tripData])
+        .select()
+        .single()
 
       if (error) {
+        console.error('Supabase error details:', error);
         throw error
       }
+      
+      console.log('Trip saved successfully:', savedTrip);
 
       toast({
         title: "출장 등록 완료",
@@ -147,9 +154,23 @@ export default function Register() {
       navigate('/')
     } catch (error) {
       console.error('Error saving trip:', error)
+      
+      // 에러의 상세 정보 표시
+      let errorMessage = "출장 등록 중 오류가 발생했습니다. 다시 시도해주세요.";
+      
+      if (error && typeof error === 'object' && 'message' in error) {
+        if ((error as any).message.includes('invalid input syntax')) {
+          errorMessage = "입력한 데이터 형식이 올바르지 않습니다. 날짜와 시간을 다시 확인해주세요.";
+        } else if ((error as any).message.includes('violates row-level security policy')) {
+          errorMessage = "권한이 없습니다. 로그인 상태를 확인해주세요.";
+        } else if ((error as any).message.includes('not-null violation')) {
+          errorMessage = "필수 입력 사항이 누락되었습니다. 모든 필드를 확인해주세요.";
+        }
+      }
+      
       toast({
         title: "저장 실패",
-        description: "출장 등록 중 오류가 발생했습니다. 다시 시도해주세요.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {

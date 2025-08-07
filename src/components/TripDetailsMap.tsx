@@ -42,10 +42,35 @@ export function TripDetailsMap({ destination, lat = 37.5665, lng = 126.9780 }: T
     const fetchPOIs = async () => {
       setLoading(true)
       try {
+        console.log(`Fetching POIs for coordinates: ${lat}, ${lng}`)
         const nearbyPOIs = await OSMPOIService.getNearbyPOIs(lat, lng)
+        console.log('Fetched POIs:', nearbyPOIs)
         setPois(nearbyPOIs)
       } catch (error) {
         console.error('Failed to fetch POIs:', error)
+        // 에러 시 fallback 데이터 표시
+        setPois([
+          {
+            id: 'fallback-1',
+            name: '주변 식당',
+            type: 'restaurant',
+            rating: 4.2,
+            description: '현지 맛집 추천',
+            lat: lat + 0.002,
+            lng: lng + 0.003,
+            address: '주변 지역'
+          },
+          {
+            id: 'fallback-2',
+            name: '주변 카페',
+            type: 'cafe',
+            rating: 4.0,
+            description: '커피와 디저트',
+            lat: lat - 0.001,
+            lng: lng + 0.002,
+            address: '주변 지역'
+          }
+        ])
       } finally {
         setLoading(false)
       }

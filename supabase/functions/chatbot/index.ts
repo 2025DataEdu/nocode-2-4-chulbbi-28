@@ -1,12 +1,18 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.53.0';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Supabase 클라이언트 생성
+const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -15,14 +21,18 @@ serve(async (req) => {
   }
 
   try {
-    const { message, context } = await req.json();
+    const { message, context, userId } = await req.json();
 
     if (!message) {
       throw new Error('메시지가 필요합니다.');
     }
 
     console.log('Received message:', message);
+    console.log('User ID:', userId);
 
+    // 출장 등록 요청 감지 및 파싱
+    const tripRegistrationResult = await detectAndParseTripRequest(message);
+    
     const systemPrompt = `당신은 '출장비서 출삐'라는 AI 출장 관리 서비스의 전문 도우미입니다.
 
 주요 역할:
@@ -71,11 +81,52 @@ serve(async (req) => {
     const data = await response.json();
     console.log('OpenAI Response:', data);
     
-    const reply = data.choices[0].message.content;
+    let reply = data.choices[0].message.content;
+    let tripSaved = false;
+
+    // 출장 등록 요청이 감지되면 실제로 데이터베이스에 저장
+    if (tripRegistrationResult.shouldRegister && userId) {
+      console.log('Attempting to save trip:', tripRegistrationResult.tripData);
+      
+      try {
+        const { data: savedTrip, error: saveError } = await supabase
+          .from('trips')
+          .insert([{
+            user_id: userId,
+            destination: tripRegistrationResult.tripData.destination,
+            departure_location: tripRegistrationResult.tripData.departure_location || '출발지',
+            purpose: tripRegistrationResult.tripData.purpose || '업무출장',
+            start_date: tripRegistrationResult.tripData.start_date,
+            end_date: tripRegistrationResult.tripData.end_date,
+            status: 'planned',
+            trip_type: '관외',
+            transportation: '대중교통',
+            accommodation_needed: false,
+            distance_km: null,
+            budget: 0,
+            notes: `챗봇을 통해 등록된 출장\n시간: ${tripRegistrationResult.tripData.schedule || '정보 없음'}`
+          }])
+          .select()
+          .single();
+
+        if (saveError) {
+          console.error('Error saving trip:', saveError);
+          reply += '\n\n⚠️ 출장 정보를 데이터베이스에 저장하는 중 오류가 발생했습니다. 출장 등록 페이지에서 직접 등록해주세요.';
+        } else {
+          console.log('Trip saved successfully:', savedTrip);
+          tripSaved = true;
+          reply += '\n\n✅ 출장 정보가 성공적으로 등록되었습니다! 대시보드에서 확인하실 수 있습니다.';
+        }
+      } catch (dbError) {
+        console.error('Database error:', dbError);
+        reply += '\n\n⚠️ 데이터베이스 연결 중 오류가 발생했습니다. 출장 등록 페이지에서 직접 등록해주세요.';
+      }
+    }
 
     return new Response(JSON.stringify({ 
       reply,
-      success: true 
+      success: true,
+      tripSaved
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -91,3 +142,102 @@ serve(async (req) => {
     });
   }
 });
+
+// 출장 등록 요청을 감지하고 파싱하는 함수
+async function detectAndParseTripRequest(message: string) {
+  // 출장 등록 관련 키워드 감지
+  const registrationKeywords = [
+    '출장', '등록', '계획', '일정', '예약'
+  ];
+  
+  const locationKeywords = [
+    '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종',
+    '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주',
+    '마포', '강남', '종로', '중구', '상암', '여의도'
+  ];
+
+  const hasRegistrationKeyword = registrationKeywords.some(keyword => 
+    message.includes(keyword)
+  );
+  
+  const hasLocationKeyword = locationKeywords.some(keyword => 
+    message.includes(keyword)
+  );
+
+  if (!hasRegistrationKeyword || !hasLocationKeyword) {
+    return { shouldRegister: false, tripData: null };
+  }
+
+  // 날짜 패턴 감지
+  const datePatterns = [
+    /(\d{1,2})월\s*(\d{1,2})일/g,
+    /(\d{4})[-.](\d{1,2})[-.](\d{1,2})/g,
+    /(\d{1,2})\/(\d{1,2})/g
+  ];
+
+  const dates: string[] = [];
+  let match;
+
+  // 월일 패턴 (예: 8월 6일)
+  const monthDayPattern = /(\d{1,2})월\s*(\d{1,2})일/g;
+  while ((match = monthDayPattern.exec(message)) !== null) {
+    const month = parseInt(match[1]);
+    const day = parseInt(match[2]);
+    const currentYear = new Date().getFullYear();
+    const date = new Date(currentYear, month - 1, day);
+    dates.push(date.toISOString().split('T')[0]);
+  }
+
+  // 목적지 추출
+  let destination = '';
+  for (const keyword of locationKeywords) {
+    if (message.includes(keyword)) {
+      // 더 구체적인 주소 찾기
+      const addressMatch = message.match(new RegExp(`${keyword}[가-힣\\s]*[구군시동]`, 'g'));
+      if (addressMatch) {
+        destination = addressMatch[0];
+      } else {
+        destination = keyword;
+      }
+      break;
+    }
+  }
+
+  // 기간 감지 (몇 일간)
+  const durationMatch = message.match(/(\d+)일/);
+  let endDate = dates[0];
+  
+  if (dates.length >= 2) {
+    endDate = dates[1];
+  } else if (dates.length === 1 && durationMatch) {
+    const duration = parseInt(durationMatch[1]);
+    const startDate = new Date(dates[0]);
+    const calculatedEndDate = new Date(startDate);
+    calculatedEndDate.setDate(startDate.getDate() + duration - 1);
+    endDate = calculatedEndDate.toISOString().split('T')[0];
+  }
+
+  // 시간 정보 추출
+  const timeMatch = message.match(/(\d{1,2})[:시]\s*(\d{1,2})?[분]?\s*[-~]\s*(\d{1,2})[:시]\s*(\d{1,2})?[분]?/);
+  let schedule = '';
+  if (timeMatch) {
+    schedule = timeMatch[0];
+  }
+
+  // 최소한의 정보가 있어야 등록
+  if (destination && dates.length > 0) {
+    return {
+      shouldRegister: true,
+      tripData: {
+        destination: destination,
+        departure_location: '출발지',
+        purpose: '업무출장',
+        start_date: dates[0],
+        end_date: endDate || dates[0],
+        schedule: schedule
+      }
+    };
+  }
+
+  return { shouldRegister: false, tripData: null };
+}

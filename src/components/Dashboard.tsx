@@ -25,16 +25,25 @@ export function Dashboard() {
 
   const fetchTrips = async () => {
     try {
+      console.log('Fetching trips for user:', user?.id);
+      
       const { data, error } = await supabase
         .from('trips')
         .select('*')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error fetching trips:', error);
+        throw error
+      }
+      
+      console.log('Fetched trips:', data);
       setTrips(data || [])
     } catch (error) {
       console.error('Error fetching trips:', error)
+      // 에러가 발생해도 빈 배열로 설정하여 UI가 정상 표시되도록 함
+      setTrips([])
     } finally {
       setLoading(false)
     }
