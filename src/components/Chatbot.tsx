@@ -57,7 +57,9 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
       if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
+        setTimeout(() => {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight
+        }, 100)
       }
     }
   }
@@ -208,9 +210,9 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
         </Button>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <ScrollArea className="flex-1 p-4 overflow-y-auto" ref={scrollAreaRef} onClick={handleBackgroundClick}>
-          <div className="space-y-4">
+      <CardContent className="flex-1 flex flex-col p-0" onClick={(e) => e.stopPropagation()}>
+        <ScrollArea className="flex-1 h-0 min-h-0" ref={scrollAreaRef} onClick={handleBackgroundClick}>
+          <div className="p-4 space-y-4 min-h-full">
             {messages.map((message) => (
               <div
                 key={message.id}
