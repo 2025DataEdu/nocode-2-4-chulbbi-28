@@ -116,9 +116,9 @@ export default function TripDetails() {
   const calculateProgress = () => {
     if (!trip) return 0
     
-    const now = new Date()
-    const start = new Date(trip.start_date)
-    const end = new Date(trip.end_date)
+    const now = getKoreanTime()
+    const start = new Date(trip.start_date + 'T00:00:00')
+    const end = new Date(trip.end_date + 'T23:59:59')
     
     if (now < start) return 0
     if (now > end) return 100
@@ -129,13 +129,21 @@ export default function TripDetails() {
     return Math.round((elapsed / total) * 100)
   }
 
+  // 한국시간 기준 현재 시간 가져오기
+  const getKoreanTime = () => {
+    const now = new Date()
+    // 한국시간(UTC+9) 기준으로 변환
+    const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000))
+    return koreanTime
+  }
+
   // 실제 날짜에 따른 현재 출장 상태 계산
   const calculateRealStatus = () => {
     if (!trip) return trip?.status || 'planned'
     
-    const now = new Date()
-    const start = new Date(trip.start_date)
-    const end = new Date(trip.end_date)
+    const now = getKoreanTime()
+    const start = new Date(trip.start_date + 'T00:00:00')
+    const end = new Date(trip.end_date + 'T23:59:59')
     
     // 현재 날짜 기준으로 실제 상태 결정
     if (now < start) {
@@ -150,9 +158,9 @@ export default function TripDetails() {
   const getDaysRemaining = () => {
     if (!trip) return 0
     
-    const now = new Date()
-    const start = new Date(trip.start_date)
-    const end = new Date(trip.end_date)
+    const now = getKoreanTime()
+    const start = new Date(trip.start_date + 'T00:00:00')
+    const end = new Date(trip.end_date + 'T23:59:59')
     const realStatus = calculateRealStatus()
     
     if (realStatus === 'ongoing') {
