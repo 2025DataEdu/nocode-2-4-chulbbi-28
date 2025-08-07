@@ -1,10 +1,13 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/integrations/supabase/client"
 import { Calendar, MapPin, Car, Building, ArrowRight, Save } from "lucide-react"
 
 const locations = [
@@ -31,6 +34,9 @@ const transportOptions = [
 
 export default function Register() {
   const [currentStep, setCurrentStep] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     destination: '',
     departure: '',
@@ -86,6 +92,65 @@ export default function Register() {
 
   const handleBack = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1)
+  }
+
+  const handleSave = async () => {
+    setIsLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        toast({
+          title: "로그인 필요",
+          description: "출장을 등록하려면 로그인이 필요합니다.",
+          variant: "destructive",
+        })
+        navigate('/auth')
+        return
+      }
+
+      const tripData = {
+        user_id: user.id,
+        destination: locations.find(loc => loc.value === formData.destination)?.label || formData.destination,
+        departure_location: locations.find(loc => loc.value === formData.departure)?.label || formData.departure,
+        purpose: formData.purpose,
+        start_date: formData.startDate,
+        end_date: formData.isDayTrip ? formData.startDate : formData.endDate,
+        trip_type: (formData.tripType === 'internal' ? '관내' : '관외') as '관내' | '관외',
+        transportation: formData.transport === 'other' ? formData.customTransport : transportOptions.find(opt => opt.value === formData.transport)?.label,
+        accommodation_needed: formData.accommodationNeeded,
+        accommodation_info: formData.accommodationNeeded ? {
+          type: formData.accommodationType,
+          details: formData.accommodationDetails
+        } : null,
+        distance_km: travelInfo?.distance ? parseInt(travelInfo.distance.split('-')[0]) || null : null,
+        status: 'planned' as 'planned' | 'ongoing' | 'completed' | 'cancelled'
+      }
+
+      const { error } = await supabase
+        .from('trips')
+        .insert([tripData])
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "출장 등록 완료",
+        description: "출장이 성공적으로 등록되었습니다.",
+      })
+
+      navigate('/')
+    } catch (error) {
+      console.error('Error saving trip:', error)
+      toast({
+        title: "저장 실패",
+        description: "출장 등록 중 오류가 발생했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const renderStepContent = () => {
@@ -175,7 +240,7 @@ export default function Register() {
                 </Label>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="startDate">출발일</Label>
                   <Input
@@ -281,7 +346,7 @@ export default function Register() {
               </Card>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <Card 
                 className={`cursor-pointer transition-smooth hover:shadow-medium ${
                   formData.tripType === 'internal' ? 'ring-2 ring-primary bg-primary/5' : ''
@@ -381,7 +446,7 @@ export default function Register() {
 
             <Card>
               <CardContent className="p-6 space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6">
                   <div>
                     <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                       <MapPin className="w-4 h-4" />
@@ -537,11 +602,13 @@ export default function Register() {
           </Button>
         ) : (
           <Button 
-            className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial"
+            onClick={handleSave}
+            disabled={isLoading}
+            className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial disabled:opacity-50"
           >
             <Save className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">저장하기</span>
-            <span className="sm:hidden">저장</span>
+            <span className="hidden sm:inline">{isLoading ? '저장 중...' : '저장하기'}</span>
+            <span className="sm:hidden">{isLoading ? '저장중' : '저장'}</span>
           </Button>
         )}
       </div>
