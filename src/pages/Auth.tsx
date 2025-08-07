@@ -33,55 +33,76 @@ export default function Auth() {
   const { signIn, signUp, loading } = useAuth()
   const navigate = useNavigate()
   const checkUsernameAvailability = async () => {
-    if (!formData.username.trim()) return
+    if (!formData.username.trim() || formData.username.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
     
-    setUsernameChecking(true)
+    setUsernameChecking(true);
     try {
       const { data, error } = await supabase.rpc('check_username_availability', {
         username_to_check: formData.username
-      })
+      });
       
       if (error) {
-        console.error('Username check error:', error)
-        setUsernameAvailable(null)
+        console.error('Username check error:', error);
+        setUsernameAvailable(null);
       } else {
-        setUsernameAvailable(data)
+        setUsernameAvailable(data);
       }
     } catch (error) {
-      console.error('Username check error:', error)
-      setUsernameAvailable(null)
+      console.error('Username check error:', error);
+      setUsernameAvailable(null);
     } finally {
-      setUsernameChecking(false)
+      setUsernameChecking(false);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+    e.preventDefault();
+    setError("");
+    
+    // 입력 검증
+    if (!formData.username.trim() || !formData.password.trim()) {
+      setError("모든 필드를 입력해주세요.");
+      return;
+    }
+    
+    if (formData.username.length < 3) {
+      setError("아이디는 최소 3자 이상이어야 합니다.");
+      return;
+    }
+    
+    if (formData.password.length < 6) {
+      setError("비밀번호는 최소 6자 이상이어야 합니다.");
+      return;
+    }
     
     // 아이디를 이메일 형식으로 변환 (Supabase Auth 호환)
-    const emailForAuth = `${formData.username}@app.local`
+    const emailForAuth = `${formData.username}@app.local`;
     
     if (isLogin) {
-      const { error } = await signIn(emailForAuth, formData.password)
+      const { error } = await signIn(emailForAuth, formData.password);
       if (error) {
         if (error.message === "Email not confirmed") {
-          setError("이메일 확인이 필요합니다. 관리자에게 문의하세요.")
+          setError("이메일 확인이 필요합니다. 관리자에게 문의하세요.");
+        } else if (error.message.includes("invalid_credentials")) {
+          setError("아이디 또는 비밀번호가 올바르지 않습니다.");
         } else {
-          setError("로그인에 실패했습니다: 아이디 또는 비밀번호를 확인해주세요.")
+          setError("로그인에 실패했습니다. 다시 시도해주세요.");
         }
       } else {
-        navigate("/")
+        navigate("/");
       }
     } else {
       if (!formData.userType || !formData.organization || !formData.baseLocation) {
-        setError("모든 필드를 입력해주세요.")
-        return
+        setError("모든 필드를 입력해주세요.");
+        return;
       }
       
       if (usernameAvailable !== true) {
-        setError("아이디 중복체크를 완료해주세요.")
-        return
+        setError("아이디 중복체크를 완료해주세요.");
+        return;
       }
       
       const userData = {
@@ -89,17 +110,23 @@ export default function Auth() {
         organization: formData.organization,
         base_location: formData.baseLocation,
         username: formData.username
-      }
+      };
       
-      const { error } = await signUp(emailForAuth, formData.password, userData)
+      const { error } = await signUp(emailForAuth, formData.password, userData);
       if (error) {
-        setError("회원가입에 실패했습니다: " + error.message)
+        if (error.message.includes("already_registered")) {
+          setError("이미 등록된 아이디입니다.");
+        } else if (error.message.includes("weak_password")) {
+          setError("비밀번호가 너무 약합니다. 최소 6자 이상 입력해주세요.");
+        } else {
+          setError("회원가입에 실패했습니다. 다시 시도해주세요.");
+        }
       } else {
-        setError("")
-        setIsLogin(true)
+        setError("");
+        setIsLogin(true);
       }
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">

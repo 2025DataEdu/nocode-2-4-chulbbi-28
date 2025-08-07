@@ -44,9 +44,13 @@ export default function Manage() {
   }, [user]);
 
   const fetchTrips = async () => {
-    if (!user) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('trips')
         .select('*')
@@ -54,17 +58,18 @@ export default function Manage() {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching trips:', error);
-        toast({
-          title: "데이터 로딩 실패",
-          description: "출장 정보를 불러오는 중 오류가 발생했습니다.",
-          variant: "destructive"
-        });
-      } else {
-        setTrips(Array.isArray(data) ? data : []);
+        throw error;
       }
-    } catch (error) {
+      
+      setTrips(Array.isArray(data) ? data : []);
+    } catch (error: any) {
       console.error('Error fetching trips:', error);
+      toast({
+        title: "데이터 로딩 실패",
+        description: error?.message || "출장 정보를 불러오는 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+      setTrips([]);
     } finally {
       setLoading(false);
     }

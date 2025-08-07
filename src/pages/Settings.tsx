@@ -38,27 +38,36 @@ export default function Settings() {
   }, [user]);
 
   const fetchProfile = async () => {
-    if (!user) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
       
-      if (error) {
-        console.error('Profile fetch error:', error);
-        toast({
-          title: "프로필 로딩 실패",
-          description: "사용자 정보를 불러올 수 없습니다.",
-          variant: "destructive"
-        });
-      } else {
-        setProfile(data);
+      if (error && error.code !== 'PGRST116') { // PGRST116은 결과 없음을 의미
+        throw error;
       }
-    } catch (error) {
+      
+      setProfile(data || {
+        user_type: '',
+        organization: '',
+        base_location: '',
+        username: user.email?.split('@')[0] || ''
+      });
+    } catch (error: any) {
       console.error('Profile fetch error:', error);
+      toast({
+        title: "프로필 로딩 실패",
+        description: error?.message || "사용자 정보를 불러올 수 없습니다.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

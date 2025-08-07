@@ -103,13 +103,14 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     setIsLoading(true)
 
     try {
-      console.log('Sending message to chatbot:', inputMessage)
-      console.log('User ID:', user?.id)
-      
       // 네트워크 연결 확인
       if (!navigator.onLine) {
-        throw new Error('인터넷 연결을 확인해주세요')
+        throw new Error('인터넷 연결을 확인해주세요');
       }
+      
+      // 타임아웃을 포함한 안전한 API 호출
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초 타임아웃
       
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: {
@@ -119,14 +120,18 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
             previousMessages: messages.slice(-5).map(msg => ({
               role: msg.role,
               content: msg.content
-            })) // 최근 5개 메시지만 컨텍스트로 전송
+            }))
           }
+        },
+        headers: {
+          'Content-Type': 'application/json'
         }
-      })
+      });
+
+      clearTimeout(timeoutId);
 
       if (error) {
-        console.error('Chatbot invoke error:', error)
-        throw new Error(`챗봇 호출 실패: ${error.message || '알 수 없는 오류'}`)
+        throw new Error(error.message || '챗봇 서비스에 연결할 수 없습니다');
       }
 
       if (data?.success && data?.reply) {

@@ -56,57 +56,61 @@ export default function TripDetails() {
   }, [id, user])
 
   const fetchTripDetails = async () => {
+    if (!id || !user?.id) {
+      navigate('/');
+      return;
+    }
+
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('trips')
         .select('*')
         .eq('id', id)
-        .eq('user_id', user?.id)
-        .single()
+        .eq('user_id', user.id)
+        .single();
 
       if (error) {
-        console.error('Error fetching trip details:', error)
-        toast({
-          title: "출장 정보를 불러올 수 없습니다",
-          description: "출장 정보 조회 중 오류가 발생했습니다.",
-          variant: "destructive"
-        })
-        navigate('/')
-        return
+        throw error;
       }
 
       if (!data) {
-        console.log('Trip not found')
         toast({
           title: "출장을 찾을 수 없습니다",
           description: "해당 출장 정보가 존재하지 않습니다.",
           variant: "destructive"
-        })
-        navigate('/')
-        return
+        });
+        navigate('/');
+        return;
       }
 
-      setTrip(data)
+      setTrip(data);
       
       // 목적지 좌표 가져오기
-      console.log('Getting coordinates for:', data.destination)
-      const coords = await GeocodingService.geocode(data.destination)
-      console.log('Geocoding result:', coords)
-      
-      if (coords) {
-        setCoordinates({ lat: coords.lat, lng: coords.lng })
-      } else {
-        console.log('No coordinates found, using fallback')
-        // 기본 좌표 (서울)
-        setCoordinates({ lat: 37.5665, lng: 126.9780 })
+      try {
+        const coords = await GeocodingService.geocode(data.destination);
+        if (coords) {
+          setCoordinates({ lat: coords.lat, lng: coords.lng });
+        } else {
+          // 기본 좌표 (서울)
+          setCoordinates({ lat: 37.5665, lng: 126.9780 });
+        }
+      } catch (geoError) {
+        console.error('Geocoding error:', geoError);
+        setCoordinates({ lat: 37.5665, lng: 126.9780 });
       }
-    } catch (error) {
-      console.error('Error fetching trip details:', error)
-      navigate('/')
+    } catch (error: any) {
+      console.error('Error fetching trip details:', error);
+      toast({
+        title: "출장 정보를 불러올 수 없습니다",
+        description: error?.message || "출장 정보 조회 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+      navigate('/');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
