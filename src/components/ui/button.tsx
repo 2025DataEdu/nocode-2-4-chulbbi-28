@@ -17,7 +17,7 @@ const buttonVariants = cva(
         destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 hover:shadow-md active:scale-[0.98] transform-gpu",
         
         // Outline - improved contrast and states
-        outline: "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground hover:border-accent active:scale-[0.98] transform-gpu",
+        outline: "border border-input bg-background shadow-sm hover:bg-accent hover:border-accent active:scale-[0.98] transform-gpu",
         
         // Secondary - refined with better hierarchy
         secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary-hover hover:shadow-md active:scale-[0.98] transform-gpu",

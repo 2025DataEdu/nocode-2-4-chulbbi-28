@@ -59,9 +59,8 @@ export default function Register() {
   const steps = [
     { id: 1, title: '기본 정보', emoji: '📝' },
     { id: 2, title: '이동 정보', emoji: '🗺️' },
-    { id: 3, title: '출장 유형', emoji: '🏢' },
-    { id: 4, title: '숙박 정보', emoji: '🏨' },
-    { id: 5, title: '확인', emoji: '✅' }
+    { id: 3, title: '숙박 정보', emoji: '🏨' },
+    { id: 4, title: '확인', emoji: '✅' }
   ]
 
   const calculateDistance = (departure: string, destination: string) => {
@@ -83,7 +82,7 @@ export default function Register() {
     : null
 
   const handleNext = () => {
-    if (currentStep < 5) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1)
       // 자동으로 출장 유형 설정
       if (currentStep === 2 && travelInfo) {
@@ -355,60 +354,6 @@ export default function Register() {
         return (
           <div className="space-y-6 animate-fade-in">
             <div className="text-center mb-8">
-              <div className="text-4xl mb-3">🏢</div>
-              <h3 className="text-xl font-semibold text-foreground">출장 유형을 선택해주세요</h3>
-              <p className="text-muted-foreground mt-2">기관 내부 또는 외부 출장을 구분합니다</p>
-            </div>
-
-            {travelInfo && (
-              <Card className="bg-accent/10 border-accent/20 mb-6">
-                <CardContent className="p-4">
-                  <h4 className="font-semibold mb-2">자동 분류 결과</h4>
-                  <p className="text-sm">
-                    선택하신 출발지와 출장지를 기준으로 <strong>{travelInfo.type === 'internal' ? '관내 출장' : '관외 출장'}</strong>으로 분류되었습니다.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="grid grid-cols-1 gap-4">
-              <Card 
-                className={`cursor-pointer transition-smooth hover:shadow-medium ${
-                  formData.tripType === 'internal' ? 'ring-2 ring-primary bg-primary/5' : ''
-                }`}
-                onClick={() => setFormData({ ...formData, tripType: 'internal' })}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl mb-3">🏢</div>
-                  <h4 className="font-semibold mb-2">관내 출장</h4>
-                  <p className="text-sm text-muted-foreground">
-                    기관 내부 또는 동일 지역 내 출장
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card 
-                className={`cursor-pointer transition-smooth hover:shadow-medium ${
-                  formData.tripType === 'external' ? 'ring-2 ring-primary bg-primary/5' : ''
-                }`}
-                onClick={() => setFormData({ ...formData, tripType: 'external' })}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl mb-3">🌏</div>
-                  <h4 className="font-semibold mb-2">관외 출장</h4>
-                  <p className="text-sm text-muted-foreground">
-                    기관 외부 또는 타 지역 출장
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )
-
-      case 4:
-        return (
-          <div className="space-y-6 animate-fade-in">
-            <div className="text-center mb-8">
               <div className="text-4xl mb-3">🏨</div>
               <h3 className="text-xl font-semibold text-foreground">숙박 정보를 입력해주세요</h3>
               <p className="text-muted-foreground mt-2">숙박이 필요한 경우 정보를 입력합니다</p>
@@ -460,7 +405,7 @@ export default function Register() {
           </div>
         )
 
-      case 5:
+      case 4:
         return (
           <div className="space-y-6 animate-fade-in">
             <div className="text-center mb-8">
@@ -618,14 +563,13 @@ export default function Register() {
           이전
         </Button>
         
-        {currentStep < 5 ? (
+        {currentStep < 4 ? (
           <Button 
             onClick={handleNext}
             disabled={
               (currentStep === 1 && (!formData.departure || !formData.destination || !formData.purpose || !formData.startDate || (!formData.isDayTrip && !formData.endDate))) ||
               (currentStep === 2 && !formData.transport) ||
-              (currentStep === 3 && !formData.tripType) ||
-              (currentStep === 4 && formData.accommodationNeeded && !formData.accommodationType)
+              (currentStep === 3 && formData.accommodationNeeded && !formData.accommodationType)
             }
             className="bg-primary text-primary-foreground hover:bg-primary/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial disabled:opacity-50"
           >
@@ -643,7 +587,6 @@ export default function Register() {
               !formData.startDate || 
               (!formData.isDayTrip && !formData.endDate) ||
               !formData.transport ||
-              !formData.tripType ||
               (formData.accommodationNeeded && !formData.accommodationType)
             }
             className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth shadow-sm hover:shadow-md flex-1 sm:flex-initial disabled:opacity-50"
