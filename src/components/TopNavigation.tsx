@@ -1,6 +1,7 @@
-import { Home, Plus, FileText, BarChart3, Settings } from "lucide-react"
+import { Home, Plus, FileText, BarChart3, Settings, LogOut } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/useAuth"
 
 const navigationItems = [
   { title: "대시보드", url: "/", icon: Home },
@@ -12,6 +13,7 @@ const navigationItems = [
 
 export function TopNavigation() {
   const location = useLocation()
+  const { user, signOut } = useAuth()
   const currentPath = location.pathname
 
   const isActive = (path: string) => currentPath === path
@@ -57,10 +59,19 @@ export function TopNavigation() {
         </nav>
 
         {/* 사용자 정보 */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="text-sm text-muted-foreground">
             환영합니다!
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={signOut}
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            로그아웃
+          </Button>
         </div>
       </div>
     </header>
