@@ -7,6 +7,7 @@ import { Plus, BarChart3, Calendar, MapPin, Building, Utensils, Camera } from "l
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { useNavigate } from "react-router-dom"
+import { useToast } from "@/hooks/use-toast"
 
 
 
@@ -16,10 +17,15 @@ export function Dashboard() {
   const [activeView, setActiveView] = useState<'ongoing' | 'planned' | 'completed' | 'all'>('ongoing')
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   useEffect(() => {
-    if (user) {
+    console.log('Dashboard: user state changed:', user?.id)
+    if (user?.id) {
       fetchTrips()
+    } else {
+      console.log('Dashboard: no user, setting loading to false')
+      setLoading(false)
     }
   }, [user])
 
@@ -47,14 +53,25 @@ export function Dashboard() {
 
       if (error) {
         console.error('Supabase error fetching trips:', error);
-        throw error
+        toast({
+          title: "데이터 로딩 실패",
+          description: "출장 정보를 불러오는 중 오류가 발생했습니다.",
+          variant: "destructive",
+        })
+        setTrips([])
+        setLoading(false)
+        return
       }
       
       console.log('Fetched trips:', data);
       setTrips(data || [])
     } catch (error) {
       console.error('Error fetching trips:', error)
-      // 에러가 발생해도 빈 배열로 설정하여 UI가 정상 표시되도록 함
+      toast({
+        title: "오류 발생", 
+        description: "출장 데이터를 불러올 수 없습니다.",
+        variant: "destructive",
+      })
       setTrips([])
     } finally {
       setLoading(false)

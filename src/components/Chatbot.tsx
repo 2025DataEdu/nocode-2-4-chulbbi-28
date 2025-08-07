@@ -76,6 +76,9 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     setIsLoading(true)
 
     try {
+      console.log('Sending message to chatbot:', inputMessage)
+      console.log('User ID:', user?.id)
+      
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: {
           message: inputMessage,
@@ -87,6 +90,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       })
 
       if (error) {
+        console.error('Chatbot invoke error:', error)
         throw error
       }
 
