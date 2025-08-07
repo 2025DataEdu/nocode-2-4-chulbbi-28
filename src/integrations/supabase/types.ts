@@ -14,7 +14,143 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          base_location: string
+          created_at: string | null
+          id: string
+          organization: string
+          updated_at: string | null
+          user_id: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Insert: {
+          base_location: string
+          created_at?: string | null
+          id?: string
+          organization: string
+          updated_at?: string | null
+          user_id: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Update: {
+          base_location?: string
+          created_at?: string | null
+          id?: string
+          organization?: string
+          updated_at?: string | null
+          user_id?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Relationships: []
+      }
+      receipts: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["receipt_category"]
+          created_at: string | null
+          description: string | null
+          file_url: string | null
+          id: string
+          receipt_date: string
+          trip_id: string
+        }
+        Insert: {
+          amount: number
+          category: Database["public"]["Enums"]["receipt_category"]
+          created_at?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          receipt_date: string
+          trip_id: string
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["receipt_category"]
+          created_at?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          receipt_date?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trips: {
+        Row: {
+          accommodation_info: Json | null
+          accommodation_needed: boolean | null
+          budget: number | null
+          created_at: string | null
+          departure_location: string
+          destination: string
+          distance_km: number | null
+          end_date: string
+          end_time: string | null
+          id: string
+          purpose: string
+          spent: number | null
+          start_date: string
+          start_time: string | null
+          status: Database["public"]["Enums"]["trip_status"] | null
+          transportation: string | null
+          trip_type: Database["public"]["Enums"]["trip_type"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accommodation_info?: Json | null
+          accommodation_needed?: boolean | null
+          budget?: number | null
+          created_at?: string | null
+          departure_location: string
+          destination: string
+          distance_km?: number | null
+          end_date: string
+          end_time?: string | null
+          id?: string
+          purpose: string
+          spent?: number | null
+          start_date: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["trip_status"] | null
+          transportation?: string | null
+          trip_type: Database["public"]["Enums"]["trip_type"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accommodation_info?: Json | null
+          accommodation_needed?: boolean | null
+          budget?: number | null
+          created_at?: string | null
+          departure_location?: string
+          destination?: string
+          distance_km?: number | null
+          end_date?: string
+          end_time?: string | null
+          id?: string
+          purpose?: string
+          spent?: number | null
+          start_date?: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["trip_status"] | null
+          transportation?: string | null
+          trip_type?: Database["public"]["Enums"]["trip_type"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +159,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      receipt_category: "교통비" | "숙박비" | "식비" | "기타"
+      trip_status: "planned" | "ongoing" | "completed" | "cancelled"
+      trip_type: "관내" | "관외"
+      user_type: "공무원" | "공공기관" | "기타"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +289,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      receipt_category: ["교통비", "숙박비", "식비", "기타"],
+      trip_status: ["planned", "ongoing", "completed", "cancelled"],
+      trip_type: ["관내", "관외"],
+      user_type: ["공무원", "공공기관", "기타"],
+    },
   },
 } as const
