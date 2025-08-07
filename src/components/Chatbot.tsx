@@ -7,6 +7,12 @@ import { MessageSquare, Send, X, Bot, User } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 
+interface ChatbotProps {
+  isOpen?: boolean
+  onClose?: () => void
+  position?: 'floating' | 'sidebar'
+}
+
 interface Message {
   id: string
   content: string
@@ -14,8 +20,8 @@ interface Message {
   timestamp: Date
 }
 
-export function Chatbot() {
-  const [isOpen, setIsOpen] = useState(false)
+export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, position = 'floating' }: ChatbotProps = {}) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -28,7 +34,12 @@ export function Chatbot() {
   const [isLoading, setIsLoading] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
+  
+  // 외부에서 제어하는 경우 vs 내부 상태로 제어하는 경우
+  const isOpen = position === 'sidebar' ? externalIsOpen : internalIsOpen
+  const setIsOpen = position === 'sidebar' ? (value: boolean) => {
+    if (!value && externalOnClose) externalOnClose()
+  } : setInternalIsOpen
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
@@ -110,10 +121,10 @@ export function Chatbot() {
     }
   }
 
-  if (!isOpen) {
+  if (!isOpen && position === 'floating') {
     return (
       <Button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setInternalIsOpen(true)}
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-primary hover:shadow-medium transition-smooth z-50"
         size="lg"
       >
@@ -122,8 +133,16 @@ export function Chatbot() {
     )
   }
 
+  if (!isOpen) {
+    return null
+  }
+
+  const cardClassName = position === 'sidebar' 
+    ? "fixed bottom-20 left-6 w-80 h-96 shadow-elegant z-50 flex flex-col"
+    : "fixed bottom-6 right-6 w-80 h-96 shadow-elegant z-50 flex flex-col"
+
   return (
-    <Card className="fixed bottom-6 right-6 w-80 h-96 shadow-elegant z-50 flex flex-col">
+    <Card className={cardClassName}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-primary text-primary-foreground rounded-t-lg">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Bot className="h-4 w-4" />

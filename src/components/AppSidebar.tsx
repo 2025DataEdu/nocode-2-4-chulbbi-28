@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Home, Plus, FileText, MessageSquare, Settings, BarChart3 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
+import { Chatbot } from "@/components/Chatbot"
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +23,7 @@ const navigationItems = [
 ]
 
 export function AppSidebar() {
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false)
   const { state } = useSidebar()
   const location = useLocation()
   const currentPath = location.pathname
@@ -88,7 +90,10 @@ export function AppSidebar() {
 
         {/* AI 챗봇 섹션 */}
         <div className="mt-8 pt-6 border-t border-border">
-          <div className={`p-3 rounded-lg bg-gradient-accent transition-smooth hover:shadow-soft ${collapsed ? "mx-auto w-fit" : ""}`}>
+          <button
+            onClick={() => setIsChatbotOpen(true)}
+            className={`w-full p-3 rounded-lg bg-gradient-accent transition-smooth hover:shadow-soft ${collapsed ? "mx-auto w-fit" : ""}`}
+          >
             {!collapsed ? (
               <div className="text-center">
                 <div className="text-2xl mb-2">🤖</div>
@@ -98,9 +103,16 @@ export function AppSidebar() {
             ) : (
               <div className="text-2xl">🤖</div>
             )}
-          </div>
+          </button>
         </div>
       </SidebarContent>
+      
+      {/* 챗봇 컴포넌트 */}
+      <Chatbot 
+        isOpen={isChatbotOpen} 
+        onClose={() => setIsChatbotOpen(false)}
+        position="sidebar"
+      />
     </Sidebar>
   )
 }
