@@ -66,12 +66,22 @@ export default function TripDetails() {
 
       if (error) {
         console.error('Error fetching trip details:', error)
+        toast({
+          title: "출장 정보를 불러올 수 없습니다",
+          description: "출장 정보 조회 중 오류가 발생했습니다.",
+          variant: "destructive"
+        })
         navigate('/')
         return
       }
 
       if (!data) {
         console.log('Trip not found')
+        toast({
+          title: "출장을 찾을 수 없습니다",
+          description: "해당 출장 정보가 존재하지 않습니다.",
+          variant: "destructive"
+        })
         navigate('/')
         return
       }

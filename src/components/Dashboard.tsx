@@ -42,11 +42,18 @@ export function Dashboard() {
   }, [user]);
   const fetchTrips = async () => {
     try {
-      console.log('Fetching trips for user:', user?.id);
+      if (!user?.id) {
+        console.log('No user ID available for fetching trips');
+        setTrips([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Fetching trips for user:', user.id);
       const {
         data,
         error
-      } = await supabase.from('trips').select('*').eq('user_id', user?.id).order('created_at', {
+      } = await supabase.from('trips').select('*').eq('user_id', user.id).order('created_at', {
         ascending: false
       });
       if (error) {
@@ -61,7 +68,7 @@ export function Dashboard() {
         return;
       }
       console.log('Fetched trips:', data);
-      setTrips(data || []);
+      setTrips(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching trips:', error);
       toast({

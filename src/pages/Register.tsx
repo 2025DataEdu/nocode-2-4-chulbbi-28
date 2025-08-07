@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import { TopNavigation } from "@/components/TopNavigation"
 import { Calendar, MapPin, Car, Building, ArrowRight, Save, X } from "lucide-react"
+import { validateTripForm, safeParseNumber } from "@/utils/validation"
 
 const locations = [
   { value: 'seoul-jung', label: '서울특별시 중구', region: 'seoul' },
@@ -83,6 +84,27 @@ export default function Register() {
     : null
 
   const handleNext = () => {
+    if (currentStep === 1) {
+      // 1단계 검증
+      const errors = validateTripForm({
+        destination: formData.destination,
+        departure: formData.departure,
+        purpose: formData.purpose,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        isDayTrip: formData.isDayTrip
+      });
+
+      if (errors.length > 0) {
+        toast({
+          title: "입력 오류",
+          description: errors[0].message,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1)
       // 자동으로 출장 유형 설정
@@ -115,24 +137,34 @@ export default function Register() {
         return
       }
 
+      // 필수 데이터 검증
+      if (!formData.destination || !formData.departure || !formData.purpose || !formData.startDate) {
+        toast({
+          title: "입력 오류",
+          description: "필수 항목을 모두 입력해주세요.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const tripData = {
         user_id: user.id,
         destination: locations.find(loc => loc.value === formData.destination)?.label || formData.destination,
         departure_location: locations.find(loc => loc.value === formData.departure)?.label || formData.departure,
-        purpose: formData.purpose,
+        purpose: formData.purpose.trim(),
         start_date: formData.startDate,
-        end_date: formData.isDayTrip ? formData.startDate : formData.endDate,
+        end_date: formData.isDayTrip ? formData.startDate : (formData.endDate || formData.startDate),
         trip_type: (formData.tripType === 'internal' ? '관내' : '관외') as '관내' | '관외',
-        transportation: formData.transport === 'other' ? formData.customTransport : transportOptions.find(opt => opt.value === formData.transport)?.label,
+        transportation: formData.transport === 'other' ? (formData.customTransport?.trim() || '기타') : transportOptions.find(opt => opt.value === formData.transport)?.label,
         accommodation_needed: formData.accommodationNeeded,
         accommodation_info: formData.accommodationNeeded ? {
-          type: formData.accommodationType,
-          details: formData.accommodationDetails
+          type: formData.accommodationType || '호텔',
+          details: formData.accommodationDetails?.trim() || ''
         } : null,
-        distance_km: travelInfo?.distance ? parseInt(travelInfo.distance.split('-')[0]) || null : null,
-        budget: formData.budget || 0,
+        distance_km: travelInfo?.distance ? Math.max(0, parseInt(travelInfo.distance.split('-')[0]) || 0) : null,
+        budget: Math.max(0, Number(formData.budget) || 0),
         status: 'planned' as 'planned' | 'ongoing' | 'completed' | 'cancelled',
-        notes: formData.specialRequirements || null
+        notes: formData.specialRequirements?.trim() || null
       }
 
       console.log('Saving trip data:', tripData);

@@ -4,6 +4,7 @@ import { CalendarDays, MapPin, DollarSign, Clock } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { supabase } from "@/integrations/supabase/client"
+import { safeParseNumber } from "@/utils/validation"
 
 interface TripCardProps {
   id: string
@@ -83,15 +84,17 @@ export function TripCard({
           // 출장 일수 계산
           const startDate = new Date(start_date)
           const endDate = new Date(end_date)
-          const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+          const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1)
           
-          // 예상 예산 계산
-          const mealCost = allowance.daily_meal_allowance * daysDiff
-          const lodgingCost = allowance.daily_lodging_allowance * (daysDiff - 1) // 숙박은 하루 적게
-          const transportCost = (distance_km || 0) * allowance.transportation_rate_per_km * 2 // 왕복
+          // 예상 예산 계산 (안전한 숫자 변환)
+          const mealCost = safeParseNumber(allowance.daily_meal_allowance) * daysDiff
+          const lodgingCost = safeParseNumber(allowance.daily_lodging_allowance) * Math.max(0, daysDiff - 1) // 숙박은 하루 적게
+          const transportCost = safeParseNumber(distance_km) * safeParseNumber(allowance.transportation_rate_per_km) * 2 // 왕복
           
           const totalEstimated = mealCost + lodgingCost + transportCost
-          setEstimatedBudget(totalEstimated)
+          setEstimatedBudget(Math.max(0, totalEstimated))
+        } else {
+          setEstimatedBudget(0)
         }
       } catch (error) {
         console.error('출장비 규정 조회 실패:', error)

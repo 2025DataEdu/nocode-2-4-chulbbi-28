@@ -108,20 +108,23 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: {
-          message: inputMessage,
-          userId: user?.id,
+          message: inputMessage.trim(),
+          userId: user?.id || null,
           context: {
-            previousMessages: messages.slice(-5) // 최근 5개 메시지만 컨텍스트로 전송
+            previousMessages: messages.slice(-5).map(msg => ({
+              role: msg.role,
+              content: msg.content
+            })) // 최근 5개 메시지만 컨텍스트로 전송
           }
         }
       })
 
       if (error) {
         console.error('Chatbot invoke error:', error)
-        throw error
+        throw new Error(`챗봇 호출 실패: ${error.message || '알 수 없는 오류'}`)
       }
 
-      if (data.success && data.reply) {
+      if (data?.success && data?.reply) {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           content: data.reply,
