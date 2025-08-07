@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { TopNavigation } from "@/components/TopNavigation"
 import { Calendar, MapPin, Car, Building, ArrowRight, Save, X } from "lucide-react"
 import { validateTripForm, safeParseNumber } from "@/utils/validation"
+import { calculateDistance as calculateDistanceUtil, extractDistanceKm } from "@/utils/distance"
 
 const locations = [
   { value: 'seoul-jung', label: '서울특별시 중구', region: 'seoul' },
@@ -66,17 +67,7 @@ export default function Register() {
   ]
 
   const calculateDistance = (departure: string, destination: string) => {
-    const depLocation = locations.find(loc => loc.value === departure)
-    const destLocation = locations.find(loc => loc.value === destination)
-    
-    if (!depLocation || !destLocation) return null
-    
-    // 같은 지역이면 근거리, 다른 지역이면 원거리로 가정
-    if (depLocation.region === destLocation.region) {
-      return { distance: '15-30km', duration: '30분-1시간', type: 'internal' }
-    } else {
-      return { distance: '200-400km', duration: '3-5시간', type: 'external' }
-    }
+    return calculateDistanceUtil(departure, destination)
   }
 
   const travelInfo = formData.departure && formData.destination 
@@ -161,7 +152,7 @@ export default function Register() {
           type: formData.accommodationType || '호텔',
           details: formData.accommodationDetails?.trim() || ''
         } : null,
-        distance_km: travelInfo?.distance ? Math.max(0, parseInt(travelInfo.distance.split('-')[0]) || 0) : null,
+        distance_km: travelInfo?.distance ? extractDistanceKm(travelInfo.distance) : null,
         budget: Math.max(0, Number(formData.budget) || 0),
         status: 'planned' as 'planned' | 'ongoing' | 'completed' | 'cancelled',
         notes: formData.specialRequirements?.trim() || null

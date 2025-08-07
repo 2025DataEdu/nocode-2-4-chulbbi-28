@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { analytics } from '@/utils/analytics'
 
 interface Props {
   children: ReactNode
@@ -25,6 +26,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo)
+    
+    // Analytics로 에러 추적
+    analytics.trackError(error, 'ErrorBoundary', {
+      componentStack: errorInfo.componentStack,
+      errorBoundary: true
+    })
   }
 
   handleReset = () => {

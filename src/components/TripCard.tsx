@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { safeParseNumber } from "@/utils/validation"
+import { normalizeRegion } from "@/utils/distance"
 
 interface TripCardProps {
   id: string
@@ -44,33 +45,12 @@ export function TripCard({
   const [allowanceData, setAllowanceData] = useState<any>(null)
   const [estimatedBudget, setEstimatedBudget] = useState<number>(0)
   
-  // 지역 추출 함수 (간단화)
-  const extractRegion = (destination: string) => {
-    if (destination.includes('서울')) return '서울'
-    if (destination.includes('부산')) return '부산'
-    if (destination.includes('대구')) return '대구'
-    if (destination.includes('인천')) return '인천'
-    if (destination.includes('광주')) return '광주'
-    if (destination.includes('대전')) return '대전'
-    if (destination.includes('울산')) return '울산'
-    if (destination.includes('세종')) return '세종'
-    if (destination.includes('경기')) return '경기'
-    if (destination.includes('강원')) return '강원'
-    if (destination.includes('충북') || destination.includes('충청북도')) return '충북'
-    if (destination.includes('충남') || destination.includes('충청남도')) return '충남'
-    if (destination.includes('전북') || destination.includes('전라북도')) return '전북'
-    if (destination.includes('전남') || destination.includes('전라남도')) return '전남'
-    if (destination.includes('경북') || destination.includes('경상북도')) return '경북'
-    if (destination.includes('경남') || destination.includes('경상남도')) return '경남'
-    if (destination.includes('제주')) return '제주'
-    return '서울' // 기본값
-  }
   
   // 출장비 규정 조회 및 예상 예산 계산
   useEffect(() => {
     const fetchAllowanceAndCalculate = async () => {
       try {
-        const region = extractRegion(destination)
+        const region = normalizeRegion(destination)
         const { data: allowance } = await supabase
           .from('business_trip_allowances')
           .select('*')
