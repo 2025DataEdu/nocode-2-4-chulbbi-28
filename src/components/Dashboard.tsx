@@ -1,76 +1,68 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TripCard } from "./TripCard"
-import { Plus, BarChart3, Calendar, Wallet } from "lucide-react"
+import { Plus, BarChart3, Calendar, MapPin } from "lucide-react"
+import { supabase } from "@/integrations/supabase/client"
+import { useAuth } from "@/hooks/useAuth"
 
-// Mock data for demonstration
-const mockTrips = [
-  {
-    id: '1',
-    destination: '부산 해운대',
-    startDate: '2024-01-15',
-    endDate: '2024-01-17',
-    status: 'ongoing' as const,
-    budget: 500000,
-    spent: 320000,
-    type: '관외' as const
-  },
-  {
-    id: '2', 
-    destination: '대전 정부청사',
-    startDate: '2024-01-20',
-    endDate: '2024-01-20',
-    status: 'planned' as const,
-    budget: 150000,
-    spent: 0,
-    type: '관내' as const
-  },
-  {
-    id: '3',
-    destination: '제주 서귀포',
-    startDate: '2024-01-05',
-    endDate: '2024-01-08',
-    status: 'completed' as const,
-    budget: 800000,
-    spent: 750000,
-    type: '관외' as const
-  }
-]
 
-const statsCards = [
-  {
-    title: "진행중인 출장",
-    value: "1",
-    subtitle: "건",
-    icon: Calendar,
-    variant: "primary" as const,
-    emoji: "✈️"
-  },
-  {
-    title: "이번 달 예산",
-    value: "1,450,000",
-    subtitle: "원",
-    icon: Wallet,
-    variant: "secondary" as const,
-    emoji: "💰"
-  },
-  {
-    title: "총 출장 건수",
-    value: "12", 
-    subtitle: "건",
-    icon: BarChart3,
-    variant: "accent" as const,
-    emoji: "📊"
-  }
-]
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'all' | 'ongoing' | 'planned' | 'completed'>('all')
-  
-  const filteredTrips = mockTrips.filter(trip => 
-    activeTab === 'all' || trip.status === activeTab
-  )
+  const [trips, setTrips] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (user) {
+      fetchTrips()
+    }
+  }, [user])
+
+  const fetchTrips = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('trips')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('status', 'ongoing')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setTrips(data || [])
+    } catch (error) {
+      console.error('Error fetching trips:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const ongoingTrips = trips.filter(trip => trip.status === 'ongoing')
+  const totalTrips = trips.length
+
+  const statsCards = [
+    {
+      title: "진행중인 출장",
+      value: ongoingTrips.length.toString(),
+      subtitle: "건",
+      icon: Calendar,
+      variant: "primary" as const,
+    },
+    {
+      title: "등록된 출장지",
+      value: new Set(trips.map(trip => trip.destination)).size.toString(),
+      subtitle: "곳",
+      icon: MapPin,
+      variant: "secondary" as const,
+    },
+    {
+      title: "총 출장 건수",
+      value: totalTrips.toString(), 
+      subtitle: "건",
+      icon: BarChart3,
+      variant: "accent" as const,
+    }
+  ]
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -78,14 +70,18 @@ export function Dashboard() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            안녕하세요! 👋
+            출장 현황 📋
           </h1>
           <p className="text-muted-foreground">
-            출장 관리를 쉽고 간편하게 시작해보세요
+            진행중인 출장을 관리하고 계획하세요
           </p>
         </div>
         
-        <Button size="lg" className="bg-gradient-primary hover:shadow-medium transition-smooth">
+        <Button 
+          size="lg" 
+          className="bg-gradient-primary hover:shadow-medium transition-smooth"
+          onClick={() => window.location.href = '/register'}
+        >
           <Plus className="w-5 h-5 mr-2" />
           새 출장 등록
         </Button>
@@ -103,7 +99,7 @@ export function Dashboard() {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <div className="text-2xl">{stat.emoji}</div>
+              <stat.icon className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline gap-2">
@@ -119,42 +115,27 @@ export function Dashboard() {
         ))}
       </div>
 
-      {/* 출장 목록 섹션 */}
+      {/* 진행중인 출장 섹션 */}
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-2xl font-semibold text-foreground">
-            내 출장 현황 🎒
-          </h2>
-          
-          {/* 필터 탭 */}
-          <div className="flex gap-2 p-1 bg-muted rounded-lg">
-            {[
-              { key: 'all', label: '전체' },
-              { key: 'ongoing', label: '진행중' },
-              { key: 'planned', label: '계획됨' },
-              { key: 'completed', label: '완료' }
-            ].map((tab) => (
-              <Button
-                key={tab.key}
-                variant={activeTab === tab.key ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setActiveTab(tab.key as any)}
-                className={`transition-smooth ${
-                  activeTab === tab.key 
-                    ? 'bg-background shadow-soft' 
-                    : 'hover:bg-background/50'
-                }`}
-              >
-                {tab.label}
-              </Button>
+        <h2 className="text-2xl font-semibold text-foreground">
+          진행중인 출장
+        </h2>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="p-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                </div>
+              </Card>
             ))}
           </div>
-        </div>
-
-        {/* 출장 카드 그리드 */}
-        {filteredTrips.length > 0 ? (
+        ) : ongoingTrips.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTrips.map((trip, index) => (
+            {ongoingTrips.map((trip, index) => (
               <div 
                 key={trip.id}
                 style={{ animationDelay: `${index * 0.1}s` }}
@@ -166,22 +147,43 @@ export function Dashboard() {
         ) : (
           <Card className="p-12 text-center">
             <div className="space-y-4">
-              <div className="text-6xl">🎒</div>
+              <div className="text-6xl">✈️</div>
               <div>
                 <h3 className="text-lg font-semibold text-foreground">
-                  {activeTab === 'all' ? '등록된 출장이 없습니다' : `${activeTab} 출장이 없습니다`}
+                  진행중인 출장이 없습니다
                 </h3>
                 <p className="text-muted-foreground mt-2">
                   새로운 출장을 등록하여 시작해보세요!
                 </p>
               </div>
-              <Button className="bg-gradient-primary hover:shadow-medium transition-smooth">
+              <Button 
+                className="bg-gradient-primary hover:shadow-medium transition-smooth"
+                onClick={() => window.location.href = '/register'}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 첫 출장 등록하기
               </Button>
             </div>
           </Card>
         )}
+      </div>
+
+      {/* 지도 섹션 */}
+      <div className="space-y-6">
+        <h2 className="text-2xl font-semibold text-foreground">
+          출장지 지도
+        </h2>
+        <Card className="p-6">
+          <div className="h-96 bg-muted rounded-lg flex items-center justify-center">
+            <div className="text-center space-y-2">
+              <MapPin className="h-12 w-12 text-muted-foreground mx-auto" />
+              <p className="text-muted-foreground">지도 기능 준비중입니다</p>
+              <p className="text-sm text-muted-foreground">
+                네이버 지도 API 연동 예정
+              </p>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   )
