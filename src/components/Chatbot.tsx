@@ -46,7 +46,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   
   // 외부에서 제어하는 경우 vs 내부 상태로 제어하는 경우
   const isOpen = position === 'sidebar' ? externalIsOpen : internalIsOpen
@@ -84,6 +84,13 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
 
     setMessages(prev => [...prev, userMessage])
     setInputMessage("")
+    
+    // Reset textarea height
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+      inputRef.current.style.height = '40px'
+    }
+    
     setIsLoading(true)
 
     try {
@@ -146,12 +153,22 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       e.preventDefault()
       sendMessage()
     }
+    // shift+enter는 줄바꿈으로 처리 (기본 동작 유지)
   }
   
   const handleBackgroundClick = () => {
     if (inputRef.current) {
       inputRef.current.focus()
     }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputMessage(e.target.value)
+    
+    // Auto-resize textarea
+    const textarea = e.target
+    textarea.style.height = 'auto'
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
   }
 
   if (!isOpen && position === 'floating') {
@@ -191,8 +208,8 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
         </Button>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0" onClick={(e) => e.stopPropagation()}>
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef} onClick={handleBackgroundClick}>
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <ScrollArea className="flex-1 p-4 overflow-y-auto" ref={scrollAreaRef} onClick={handleBackgroundClick}>
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -244,14 +261,15 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
 
         <div className="p-4 border-t border-border">
           <div className="flex gap-2">
-            <Input
+            <textarea
               ref={inputRef}
               value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="메시지를 입력하세요..."
+              onChange={handleInputChange}
+              onKeyDown={handleKeyPress}
+              placeholder="메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              rows={1}
             />
             <Button
               onClick={sendMessage}
