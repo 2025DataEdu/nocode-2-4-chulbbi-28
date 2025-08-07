@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
-      const redirectUrl = `${window.location.origin}/`
+      const redirectUrl = `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -50,49 +50,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           emailRedirectTo: redirectUrl,
           data: userData
         }
-      })
+      });
       
       if (error) {
-        toast.error("회원가입 실패: " + error.message)
+        // 사용자 친화적 에러 메시지
+        let message = "회원가입에 실패했습니다.";
+        if (error.message.includes("already_registered")) {
+          message = "이미 등록된 이메일입니다.";
+        } else if (error.message.includes("invalid_email")) {
+          message = "유효하지 않은 이메일 형식입니다.";
+        } else if (error.message.includes("weak_password")) {
+          message = "비밀번호가 너무 약합니다. 최소 6자 이상 입력해주세요.";
+        }
+        toast.error(message);
       } else {
-        toast.success("회원가입이 완료되었습니다!")
+        toast.success("회원가입이 완료되었습니다! 이메일을 확인해주세요.");
       }
       
-      return { error }
+      return { error };
     } catch (error) {
-      console.error('SignUp error:', error)
-      toast.error("회원가입 중 오류가 발생했습니다.")
-      return { error }
+      console.error('SignUp error:', error);
+      toast.error("회원가입 중 오류가 발생했습니다.");
+      return { error };
     }
-  }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
-      })
+      });
       
       if (error) {
-        toast.error("로그인 실패: " + error.message)
+        // 사용자 친화적 에러 메시지
+        let message = "로그인에 실패했습니다.";
+        if (error.message.includes("invalid_credentials")) {
+          message = "이메일 또는 비밀번호가 올바르지 않습니다.";
+        } else if (error.message.includes("email_not_confirmed")) {
+          message = "이메일 인증이 필요합니다. 이메일을 확인해주세요.";
+        } else if (error.message.includes("too_many_requests")) {
+          message = "너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.";
+        }
+        toast.error(message);
       } else {
-        toast.success("로그인되었습니다!")
+        toast.success("로그인되었습니다!");
       }
       
-      return { error }
+      return { error };
     } catch (error) {
-      console.error('SignIn error:', error)
-      toast.error("로그인 중 오류가 발생했습니다.")
-      return { error }
+      console.error('SignIn error:', error);
+      toast.error("로그인 중 오류가 발생했습니다.");
+      return { error };
     }
-  }
+  };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      toast.error("로그아웃 실패: " + error.message)
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast.error("로그아웃에 실패했습니다.");
+      } else {
+        toast.success("로그아웃되었습니다.");
+      }
+    } catch (error) {
+      console.error('SignOut error:', error);
+      toast.error("로그아웃 중 오류가 발생했습니다.");
     }
-  }
+  };
 
   return (
     <AuthContext.Provider value={{

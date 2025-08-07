@@ -21,19 +21,18 @@ export function Dashboard() {
     toast
   } = useToast();
   useEffect(() => {
-    console.log('Dashboard: user state changed:', user?.id);
     if (user?.id) {
       fetchTrips();
     } else {
-      console.log('Dashboard: no user, setting loading to false');
       setLoading(false);
+      setTrips([]);
     }
   }, [user]);
 
   // 출장 업데이트 이벤트 리스너
   useEffect(() => {
     const handleTripUpdate = () => {
-      if (user) {
+      if (user?.id) {
         fetchTrips();
       }
     };
@@ -43,37 +42,28 @@ export function Dashboard() {
   const fetchTrips = async () => {
     try {
       if (!user?.id) {
-        console.log('No user ID available for fetching trips');
         setTrips([]);
         setLoading(false);
         return;
       }
 
-      console.log('Fetching trips for user:', user.id);
-      const {
-        data,
-        error
-      } = await supabase.from('trips').select('*').eq('user_id', user.id).order('created_at', {
-        ascending: false
-      });
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('trips')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
       if (error) {
-        console.error('Supabase error fetching trips:', error);
-        toast({
-          title: "데이터 로딩 실패",
-          description: "출장 정보를 불러오는 중 오류가 발생했습니다.",
-          variant: "destructive"
-        });
-        setTrips([]);
-        setLoading(false);
-        return;
+        throw error;
       }
-      console.log('Fetched trips:', data);
+      
       setTrips(Array.isArray(data) ? data : []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching trips:', error);
       toast({
-        title: "오류 발생",
-        description: "출장 데이터를 불러올 수 없습니다.",
+        title: "데이터 로딩 실패",
+        description: error?.message || "출장 정보를 불러오는 중 오류가 발생했습니다.",
         variant: "destructive"
       });
       setTrips([]);

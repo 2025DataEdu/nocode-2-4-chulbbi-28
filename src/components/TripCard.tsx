@@ -50,39 +50,52 @@ export function TripCard({
   useEffect(() => {
     const fetchAllowanceAndCalculate = async () => {
       try {
-        const region = normalizeRegion(destination)
-        const { data: allowance } = await supabase
+        if (!destination || !start_date || !end_date) {
+          setEstimatedBudget(0);
+          return;
+        }
+
+        const region = normalizeRegion(destination);
+        const { data: allowance, error } = await supabase
           .from('business_trip_allowances')
           .select('*')
           .eq('organization', '기본')
           .eq('region', region)
-          .single()
+          .single();
         
-        if (allowance) {
-          setAllowanceData(allowance)
-          
-          // 출장 일수 계산
-          const startDate = new Date(start_date)
-          const endDate = new Date(end_date)
-          const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1)
-          
-          // 예상 예산 계산 (안전한 숫자 변환)
-          const mealCost = safeParseNumber(allowance.daily_meal_allowance) * daysDiff
-          const lodgingCost = safeParseNumber(allowance.daily_lodging_allowance) * Math.max(0, daysDiff - 1) // 숙박은 하루 적게
-          const transportCost = safeParseNumber(distance_km) * safeParseNumber(allowance.transportation_rate_per_km) * 2 // 왕복
-          
-          const totalEstimated = mealCost + lodgingCost + transportCost
-          setEstimatedBudget(Math.max(0, totalEstimated))
-        } else {
-          setEstimatedBudget(0)
+        if (error || !allowance) {
+          setEstimatedBudget(0);
+          return;
         }
+
+        setAllowanceData(allowance);
+        
+        // 출장 일수 계산 (안전한 날짜 처리)
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+        
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          setEstimatedBudget(0);
+          return;
+        }
+        
+        const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        
+        // 예상 예산 계산 (안전한 숫자 변환)
+        const mealCost = safeParseNumber(allowance.daily_meal_allowance) * daysDiff;
+        const lodgingCost = safeParseNumber(allowance.daily_lodging_allowance) * Math.max(0, daysDiff - 1);
+        const transportCost = safeParseNumber(distance_km) * safeParseNumber(allowance.transportation_rate_per_km) * 2;
+        
+        const totalEstimated = mealCost + lodgingCost + transportCost;
+        setEstimatedBudget(Math.max(0, totalEstimated));
       } catch (error) {
-        console.error('출장비 규정 조회 실패:', error)
+        console.error('출장비 규정 조회 실패:', error);
+        setEstimatedBudget(0);
       }
-    }
+    };
     
-    fetchAllowanceAndCalculate()
-  }, [destination, start_date, end_date, distance_km])
+    fetchAllowanceAndCalculate();
+  }, [destination, start_date, end_date, distance_km]);
   
   const spentPercentage = estimatedBudget > 0 ? (spent / estimatedBudget) * 100 : 0
   
