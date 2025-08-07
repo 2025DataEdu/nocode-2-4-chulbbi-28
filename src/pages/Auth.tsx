@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/hooks/useAuth"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, AlertCircle } from "lucide-react"
 
 const locations = [
   "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시", 
@@ -18,6 +19,7 @@ const locations = [
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -30,10 +32,17 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
     
     if (isLogin) {
       const { error } = await signIn(formData.email, formData.password)
-      if (!error) {
+      if (error) {
+        if (error.message === "Email not confirmed") {
+          setError("이메일 확인이 필요합니다. 가입 시 사용한 이메일을 확인해주세요.")
+        } else {
+          setError("로그인에 실패했습니다: " + error.message)
+        }
+      } else {
         navigate("/")
       }
     } else {
@@ -48,7 +57,10 @@ export default function Auth() {
       }
       
       const { error } = await signUp(formData.email, formData.password, userData)
-      if (!error) {
+      if (error) {
+        setError("회원가입에 실패했습니다: " + error.message)
+      } else {
+        setError("")
         setIsLogin(true)
       }
     }
@@ -63,6 +75,13 @@ export default function Auth() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">이메일</Label>
@@ -158,6 +177,7 @@ export default function Auth() {
                 variant="ghost"
                 onClick={() => {
                   setIsLogin(!isLogin)
+                  setError("")
                   setFormData({
                     email: "",
                     password: "",
