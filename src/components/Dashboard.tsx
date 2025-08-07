@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TripCard } from "./TripCard"
-import { Plus, BarChart3, Calendar, MapPin } from "lucide-react"
+import { Plus, BarChart3, Calendar, MapPin, Building, Utensils, Camera } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -70,10 +70,10 @@ export function Dashboard() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            출장 현황 📋
+            진행중인 출장
           </h1>
           <p className="text-muted-foreground">
-            진행중인 출장을 관리하고 계획하세요
+            현재 진행중인 출장을 관리하고 계획하세요
           </p>
         </div>
         
@@ -147,13 +147,13 @@ export function Dashboard() {
         ) : (
           <Card className="p-12 text-center">
             <div className="space-y-4">
-              <div className="text-6xl">✈️</div>
+              <Calendar className="h-16 w-16 text-muted-foreground mx-auto" />
               <div>
                 <h3 className="text-lg font-semibold text-foreground">
                   진행중인 출장이 없습니다
                 </h3>
                 <p className="text-muted-foreground mt-2">
-                  새로운 출장을 등록하여 시작해보세요!
+                  새로운 출장을 등록하여 시작해보세요
                 </p>
               </div>
               <Button 
@@ -168,23 +168,87 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* 지도 섹션 */}
-      <div className="space-y-6">
-        <h2 className="text-2xl font-semibold text-foreground">
-          출장지 지도
-        </h2>
-        <Card className="p-6">
-          <div className="h-96 bg-muted rounded-lg flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <MapPin className="h-12 w-12 text-muted-foreground mx-auto" />
-              <p className="text-muted-foreground">지도 기능 준비중입니다</p>
-              <p className="text-sm text-muted-foreground">
-                네이버 지도 API 연동 예정
-              </p>
-            </div>
+      {/* 출장지 정보 및 추천 섹션 */}
+      {ongoingTrips.length > 0 && (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-semibold text-foreground">
+            출장지 정보 및 추천
+          </h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 지도 섹션 */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                출장지 지도
+              </h3>
+              <div className="h-80 bg-muted rounded-lg flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto" />
+                  <p className="text-muted-foreground">지도 기능 준비중</p>
+                  <p className="text-sm text-muted-foreground">
+                    네이버 지도 API 연동 예정
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* 추천 정보 섹션 */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">추천 정보</h3>
+              <div className="space-y-6">
+                {/* 숙소 추천 */}
+                <div>
+                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    추천 숙소
+                  </h4>
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-sm text-foreground font-medium">비즈니스 호텔 A</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      • 출장지에서 도보 5분 거리
+                      • 무료 WiFi 및 비즈니스 센터 완비
+                      • 조식 포함 (1박 120,000원)
+                    </p>
+                  </div>
+                </div>
+
+                {/* 식당 추천 */}
+                <div>
+                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
+                    <Utensils className="h-4 w-4" />
+                    비즈니스 미팅 적합 식당
+                  </h4>
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-sm text-foreground font-medium">한정식 레스토랑 B</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      • 조용한 분위기로 비즈니스 미팅에 적합
+                      • 개별 룸 예약 가능
+                      • 1인당 35,000원 (점심 코스)
+                    </p>
+                  </div>
+                </div>
+
+                {/* 관광지 추천 */}
+                <div>
+                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
+                    <Camera className="h-4 w-4" />
+                    주변 관광지
+                  </h4>
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-sm text-foreground font-medium">문화유적지 C</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      • 출장 여유시간에 방문 추천
+                      • 대중교통으로 15분 거리
+                      • 입장료 무료, 사진 촬영 가능
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
-        </Card>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

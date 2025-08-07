@@ -14,9 +14,9 @@ interface TripCardProps {
 }
 
 const statusConfig = {
-  planned: { label: '계획됨', variant: 'secondary' as const, emoji: '📅' },
-  ongoing: { label: '진행중', variant: 'default' as const, emoji: '✈️' },
-  completed: { label: '완료', variant: 'outline' as const, emoji: '✅' }
+  planned: { label: '계획됨', variant: 'secondary' as const },
+  ongoing: { label: '진행중', variant: 'default' as const },
+  completed: { label: '완료', variant: 'outline' as const }
 }
 
 export function TripCard({ 
@@ -36,12 +36,9 @@ export function TripCard({
     <Card className="group hover:shadow-medium transition-smooth cursor-pointer animate-fade-in">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{config.emoji}</span>
-            <CardTitle className="text-lg font-semibold truncate">
-              {destination}
-            </CardTitle>
-          </div>
+          <CardTitle className="text-lg font-semibold truncate">
+            {destination}
+          </CardTitle>
           <Badge variant={config.variant} className="shrink-0">
             {config.label}
           </Badge>
