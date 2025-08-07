@@ -341,7 +341,7 @@ export default function TripDetails() {
 
       {/* 편집 다이얼로그 */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] z-[9999]">
           <DialogHeader>
             <DialogTitle>출장 정보 수정</DialogTitle>
           </DialogHeader>
