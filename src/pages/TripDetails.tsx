@@ -336,7 +336,7 @@ export default function TripDetails() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-muted-foreground text-caption">
                   <Clock className="h-4 w-4" />
-                  종료까지
+                  {getDateLabel()}
                 </div>
                 <p className="font-medium text-foreground">
                   {getDateValue()}
