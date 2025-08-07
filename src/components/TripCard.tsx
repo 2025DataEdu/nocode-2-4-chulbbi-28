@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CalendarDays, MapPin, DollarSign, Clock } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { supabase } from "@/integrations/supabase/client"
 
 interface TripCardProps {
   id: string
@@ -32,12 +34,74 @@ export function TripCard({
   realStatus,
   budget = 0, 
   spent = 0, 
-  purpose = "출장"
+  purpose = "출장",
+  distance_km = 0
 }: TripCardProps) {
   const navigate = useNavigate()
   const actualStatus = realStatus || status
   const config = statusConfig[actualStatus] || statusConfig.planned
-  const spentPercentage = budget > 0 ? (spent / budget) * 100 : 0
+  const [allowanceData, setAllowanceData] = useState<any>(null)
+  const [estimatedBudget, setEstimatedBudget] = useState<number>(0)
+  
+  // 지역 추출 함수 (간단화)
+  const extractRegion = (destination: string) => {
+    if (destination.includes('서울')) return '서울'
+    if (destination.includes('부산')) return '부산'
+    if (destination.includes('대구')) return '대구'
+    if (destination.includes('인천')) return '인천'
+    if (destination.includes('광주')) return '광주'
+    if (destination.includes('대전')) return '대전'
+    if (destination.includes('울산')) return '울산'
+    if (destination.includes('세종')) return '세종'
+    if (destination.includes('경기')) return '경기'
+    if (destination.includes('강원')) return '강원'
+    if (destination.includes('충북') || destination.includes('충청북도')) return '충북'
+    if (destination.includes('충남') || destination.includes('충청남도')) return '충남'
+    if (destination.includes('전북') || destination.includes('전라북도')) return '전북'
+    if (destination.includes('전남') || destination.includes('전라남도')) return '전남'
+    if (destination.includes('경북') || destination.includes('경상북도')) return '경북'
+    if (destination.includes('경남') || destination.includes('경상남도')) return '경남'
+    if (destination.includes('제주')) return '제주'
+    return '서울' // 기본값
+  }
+  
+  // 출장비 규정 조회 및 예상 예산 계산
+  useEffect(() => {
+    const fetchAllowanceAndCalculate = async () => {
+      try {
+        const region = extractRegion(destination)
+        const { data: allowance } = await supabase
+          .from('business_trip_allowances')
+          .select('*')
+          .eq('organization', '기본')
+          .eq('region', region)
+          .single()
+        
+        if (allowance) {
+          setAllowanceData(allowance)
+          
+          // 출장 일수 계산
+          const startDate = new Date(start_date)
+          const endDate = new Date(end_date)
+          const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+          
+          // 예상 예산 계산
+          const mealCost = allowance.daily_meal_allowance * daysDiff
+          const lodgingCost = allowance.daily_lodging_allowance * (daysDiff - 1) // 숙박은 하루 적게
+          const transportCost = (distance_km || 0) * allowance.transportation_rate_per_km * 2 // 왕복
+          
+          const totalEstimated = mealCost + lodgingCost + transportCost
+          setEstimatedBudget(totalEstimated)
+        }
+      } catch (error) {
+        console.error('출장비 규정 조회 실패:', error)
+      }
+    }
+    
+    fetchAllowanceAndCalculate()
+  }, [destination, start_date, end_date, distance_km])
+  
+  const spentPercentage = estimatedBudget > 0 ? (spent / estimatedBudget) * 100 : 0
   
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -80,9 +144,9 @@ export function TripCard({
         {/* 예산 정보 - 향상된 시각적 표현 */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-caption text-muted-foreground">예산 사용</span>
+            <span className="text-caption text-muted-foreground">사용예산/출장비</span>
             <span className="text-caption font-bold text-foreground">
-              {spent.toLocaleString()}원 / {budget.toLocaleString()}원
+              {spent.toLocaleString()}원 / {estimatedBudget.toLocaleString()}원
             </span>
           </div>
           
