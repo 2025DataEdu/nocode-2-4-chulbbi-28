@@ -1,39 +1,46 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CalendarDays, MapPin, DollarSign, Clock } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 interface TripCardProps {
   id: string
   destination: string
-  startDate: string
-  endDate: string
-  status: 'planned' | 'ongoing' | 'completed'
-  budget: number
+  start_date: string
+  end_date: string
+  status: 'planned' | 'ongoing' | 'completed' | 'cancelled'
+  budget?: number
   spent?: number
-  type: '관내' | '관외'
+  purpose?: string
+  [key: string]: any // Supabase에서 추가 필드들을 위해
 }
 
 const statusConfig = {
   planned: { label: '계획됨', variant: 'secondary' as const },
   ongoing: { label: '진행중', variant: 'default' as const },
-  completed: { label: '완료', variant: 'outline' as const }
+  completed: { label: '완료', variant: 'outline' as const },
+  cancelled: { label: '취소됨', variant: 'destructive' as const }
 }
 
 export function TripCard({ 
   id, 
   destination, 
-  startDate, 
-  endDate, 
+  start_date, 
+  end_date, 
   status, 
-  budget, 
+  budget = 0, 
   spent = 0, 
-  type 
+  purpose = "출장"
 }: TripCardProps) {
-  const config = statusConfig[status]
+  const navigate = useNavigate()
+  const config = statusConfig[status] || statusConfig.planned
   const spentPercentage = budget > 0 ? (spent / budget) * 100 : 0
   
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer animate-fade-in bg-gradient-card border-0 shadow-md overflow-hidden">
+    <Card 
+      className="group hover:shadow-lg transition-all duration-300 cursor-pointer animate-fade-in bg-gradient-card border-0 shadow-md overflow-hidden"
+      onClick={() => navigate(`/trip/${id}`)}
+    >
       <CardContent className="p-6">
         {/* 헤더 - 목적지와 상태 */}
         <div className="flex items-start justify-between mb-4">
@@ -43,7 +50,7 @@ export function TripCard({
             </h3>
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-accent flex-shrink-0" />
-              <span className="text-caption text-muted-foreground">{type} 출장</span>
+              <span className="text-caption text-muted-foreground">{purpose}</span>
             </div>
           </div>
           <Badge 
@@ -58,7 +65,7 @@ export function TripCard({
         <div className="flex items-center gap-3 mb-4 p-3 bg-muted/30 rounded-lg backdrop-blur-sm">
           <CalendarDays className="w-4 h-4 text-primary" />
           <span className="text-caption font-medium text-foreground">
-            {startDate} ~ {endDate}
+            {new Date(start_date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ~ {new Date(end_date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
           </span>
         </div>
         

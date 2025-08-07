@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
+import TripDetails from "./pages/TripDetails";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -81,6 +82,7 @@ function AppContent() {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/trip/:id" element={<TripDetails />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>

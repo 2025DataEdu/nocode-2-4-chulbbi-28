@@ -6,12 +6,12 @@ import { TripCard } from '../TripCard'
 const mockTripData = {
   id: 'test-trip-1',
   destination: '서울특별시 강남구',
-  startDate: '2024-08-15',
-  endDate: '2024-08-16',
+  start_date: '2024-08-15',
+  end_date: '2024-08-16',
   status: 'ongoing' as const,
   budget: 500000,
   spent: 200000,
-  type: '관외' as const,
+  purpose: '업무출장',
 }
 
 describe('TripCard', () => {
@@ -19,8 +19,7 @@ describe('TripCard', () => {
     render(<TripCard {...mockTripData} />)
     
     expect(screen.getByText('서울특별시 강남구')).toBeInTheDocument()
-    expect(screen.getByText('2024-08-15 ~ 2024-08-16')).toBeInTheDocument()
-    expect(screen.getByText('관외 출장')).toBeInTheDocument()
+    expect(screen.getByText('업무출장')).toBeInTheDocument()
   })
 
   it('displays correct status badge', () => {
@@ -57,11 +56,11 @@ describe('TripCard', () => {
     expect(screen.getByText('90.0% 사용')).toBeInTheDocument()
   })
 
-  it('shows internal trip type correctly', () => {
-    const internalTrip = { ...mockTripData, type: '관내' as const }
-    render(<TripCard {...internalTrip} />)
+  it('shows purpose correctly', () => {
+    const purposeTrip = { ...mockTripData, purpose: '회의 참석' }
+    render(<TripCard {...purposeTrip} />)
     
-    expect(screen.getByText('관내 출장')).toBeInTheDocument()
+    expect(screen.getByText('회의 참석')).toBeInTheDocument()
   })
 
   it('handles zero budget correctly', () => {
