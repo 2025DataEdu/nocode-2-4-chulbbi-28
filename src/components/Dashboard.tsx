@@ -20,6 +20,20 @@ export function Dashboard() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
+  // 출장 상세에서 돌아올 때 상태 확인
+  useEffect(() => {
+    const returnedFromTripDetail = localStorage.getItem('returnedFromTripDetail')
+    if (returnedFromTripDetail) {
+      const tripStatus = localStorage.getItem('lastViewedTripStatus')
+      if (tripStatus && ['ongoing', 'planned', 'completed'].includes(tripStatus)) {
+        setActiveView(tripStatus as 'ongoing' | 'planned' | 'completed')
+      }
+      // 사용 후 제거
+      localStorage.removeItem('returnedFromTripDetail')
+      localStorage.removeItem('lastViewedTripStatus')
+    }
+  }, [])
+
   useEffect(() => {
     console.log('Dashboard: user state changed:', user?.id)
     if (user?.id) {

@@ -315,7 +315,13 @@ export default function TripDetails() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/')}
+            onClick={() => {
+              // 현재 출장의 상태를 저장
+              const realStatus = calculateRealStatus()
+              localStorage.setItem('returnedFromTripDetail', 'true')
+              localStorage.setItem('lastViewedTripStatus', realStatus)
+              navigate('/')
+            }}
             className="hover:bg-muted hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
