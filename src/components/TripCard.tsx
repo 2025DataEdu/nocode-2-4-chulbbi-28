@@ -144,7 +144,7 @@ export function TripCard({
         {/* 예산 정보 - 향상된 시각적 표현 */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-caption text-muted-foreground">사용예산/출장비</span>
+            <span className="text-caption text-muted-foreground">지출/여비</span>
             <span className="text-caption font-bold text-foreground">
               {spent.toLocaleString()}원 / {estimatedBudget.toLocaleString()}원
             </span>
