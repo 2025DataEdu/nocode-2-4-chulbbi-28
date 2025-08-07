@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MessageSquare, Send, X, Bot, User, Trash2 } from "lucide-react"
+import { MessageSquare, Send, X, Bot, User, RotateCcw, ChevronDown } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/useAuth"
@@ -24,6 +24,7 @@ interface Message {
 export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, position = 'floating' }: ChatbotProps = {}) {
   const { user } = useAuth()
   const [internalIsOpen, setInternalIsOpen] = useState(false)
+  const [showScrollButton, setShowScrollButton] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -57,7 +58,16 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     if (scrollAreaRef.current) {
       setTimeout(() => {
         scrollAreaRef.current!.scrollTop = scrollAreaRef.current!.scrollHeight
+        setShowScrollButton(false)
       }, 100)
+    }
+  }
+
+  const handleScroll = () => {
+    if (scrollAreaRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+      setShowScrollButton(!isNearBottom && scrollHeight > clientHeight)
     }
   }
 
@@ -216,16 +226,17 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
           size="sm"
           onClick={handleClearChat}
           className="h-6 w-6 p-0 hover:bg-white/20"
-          title="대화 내역 지우기"
+          title="대화 새로고침"
         >
-          <Trash2 className="h-4 w-4" />
+          <RotateCcw className="h-4 w-4" />
         </Button>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0" onClick={(e) => e.stopPropagation()}>
+      <CardContent className="flex-1 flex flex-col p-0 relative" onClick={(e) => e.stopPropagation()}>
         <div 
           className="flex-1 overflow-y-auto p-4 space-y-4"
           ref={scrollAreaRef}
+          onScroll={handleScroll}
           style={{ maxHeight: 'calc(100% - 80px)' }}
         >
           {messages.map((message) => (
@@ -274,6 +285,17 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
             </div>
           )}
         </div>
+
+        {/* 아래로 스크롤 버튼 */}
+        {showScrollButton && (
+          <Button
+            onClick={scrollToBottom}
+            className="absolute bottom-20 right-6 h-10 w-10 rounded-full bg-gradient-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 z-10"
+            size="sm"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        )}
 
         <div className="p-4 border-t border-border flex-shrink-0">
           <div className="flex gap-2">
