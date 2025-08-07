@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { GeocodingService } from '@/services/GeocodingService'
 
 interface Trip {
   id: string
@@ -29,6 +30,7 @@ export default function TripDetails() {
   const { user } = useAuth()
   const [trip, setTrip] = useState<Trip | null>(null)
   const [loading, setLoading] = useState(true)
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
 
   useEffect(() => {
     if (id && user) {
@@ -47,6 +49,14 @@ export default function TripDetails() {
 
       if (error) throw error
       setTrip(data)
+      
+      // 좌표 가져오기
+      if (data?.destination) {
+        const coords = await GeocodingService.geocode(data.destination)
+        if (coords) {
+          setCoordinates({ lat: coords.lat, lng: coords.lng })
+        }
+      }
     } catch (error) {
       console.error('Error fetching trip details:', error)
       navigate('/')
@@ -233,7 +243,11 @@ export default function TripDetails() {
       </Card>
 
       {/* 지도 및 추천 장소 */}
-      <TripDetailsMap destination={trip.destination} />
+      <TripDetailsMap 
+        destination={trip.destination} 
+        lat={coordinates?.lat} 
+        lng={coordinates?.lng} 
+      />
     </div>
   )
 }

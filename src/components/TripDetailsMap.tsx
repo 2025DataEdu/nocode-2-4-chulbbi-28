@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Coffee, Utensils, Camera, Star } from 'lucide-react'
+import { MapPin, Coffee, Utensils, Camera, Star, Loader2 } from 'lucide-react'
+import { OSMPOIService } from '@/services/OSMPOIService'
 
 // Leaflet 기본 아이콘 설정 수정
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -33,60 +34,25 @@ interface TripDetailsMapProps {
 export function TripDetailsMap({ destination, lat = 37.5665, lng = 126.9780 }: TripDetailsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
+  const [pois, setPois] = useState<POI[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // 가상의 POI 데이터 (실제로는 API에서 가져와야 함)
-  const pois: POI[] = [
-    {
-      id: '1',
-      name: '맛있는 한정식',
-      type: 'restaurant',
-      rating: 4.5,
-      description: '전통 한식의 정수를 담은 한정식',
-      lat: lat + 0.005,
-      lng: lng + 0.008,
-      address: '서울시 중구 명동 123-45'
-    },
-    {
-      id: '2',
-      name: '아늑한 카페',
-      type: 'cafe',
-      rating: 4.2,
-      description: '조용한 분위기의 프리미엄 커피',
-      lat: lat - 0.003,
-      lng: lng + 0.006,
-      address: '서울시 중구 을지로 67-89'
-    },
-    {
-      id: '3',
-      name: '역사 박물관',
-      type: 'attraction',
-      rating: 4.8,
-      description: '도시의 역사와 문화를 한눈에',
-      lat: lat + 0.002,
-      lng: lng - 0.004,
-      address: '서울시 중구 태평로 234-56'
-    },
-    {
-      id: '4',
-      name: '이탈리안 레스토랑',
-      type: 'restaurant',
-      rating: 4.3,
-      description: '정통 이탈리아 요리',
-      lat: lat - 0.006,
-      lng: lng - 0.002,
-      address: '서울시 중구 소공동 345-67'
-    },
-    {
-      id: '5',
-      name: '루프탑 카페',
-      type: 'cafe',
-      rating: 4.6,
-      description: '도심 전망이 아름다운 루프탑',
-      lat: lat + 0.008,
-      lng: lng - 0.007,
-      address: '서울시 중구 명동길 456-78'
+  // 실제 POI 데이터 가져오기
+  useEffect(() => {
+    const fetchPOIs = async () => {
+      setLoading(true)
+      try {
+        const nearbyPOIs = await OSMPOIService.getNearbyPOIs(lat, lng)
+        setPois(nearbyPOIs)
+      } catch (error) {
+        console.error('Failed to fetch POIs:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+
+    fetchPOIs()
+  }, [lat, lng])
 
   useEffect(() => {
     if (!mapRef.current) return
@@ -98,9 +64,12 @@ export function TripDetailsMap({ destination, lat = 37.5665, lng = 126.9780 }: T
 
     const map = L.map(mapRef.current).setView([lat, lng], 14)
 
-    // 타일 레이어 추가
+    // OpenStreetMap 타일 레이어 추가 (무료 사용)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      tileSize: 256,
+      zoomOffset: 0
     }).addTo(map)
 
     // 출장지 마커 (메인)
@@ -192,7 +161,7 @@ export function TripDetailsMap({ destination, lat = 37.5665, lng = 126.9780 }: T
         mapInstanceRef.current = null
       }
     }
-  }, [lat, lng, destination])
+  }, [lat, lng, pois])
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -243,10 +212,24 @@ export function TripDetailsMap({ destination, lat = 37.5665, lng = 126.9780 }: T
       {/* POI 목록 */}
       <Card className="border-0 shadow-elegant">
         <CardHeader>
-          <CardTitle className="text-title">추천 장소 목록</CardTitle>
+          <CardTitle className="text-title flex items-center gap-2">
+            추천 장소 목록
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {pois.map((poi) => (
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">주변 장소를 찾는 중...</span>
+            </div>
+          ) : pois.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">주변에 추천할 장소가 없습니다</p>
+            </div>
+          ) : (
+            pois.map((poi) => (
             <div 
               key={poi.id}
               className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-smooth border border-border/50"
@@ -274,7 +257,8 @@ export function TripDetailsMap({ destination, lat = 37.5665, lng = 126.9780 }: T
                 <p className="text-xs text-muted-foreground opacity-75">{poi.address}</p>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </CardContent>
       </Card>
     </div>

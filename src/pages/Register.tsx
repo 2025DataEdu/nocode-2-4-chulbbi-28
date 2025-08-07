@@ -51,7 +51,9 @@ export default function Register() {
     accommodationType: '',
     accommodationDetails: '',
     distance: '',
-    duration: ''
+    duration: '',
+    budget: 0,
+    specialRequirements: ''
   })
 
   const steps = [
@@ -124,7 +126,9 @@ export default function Register() {
           details: formData.accommodationDetails
         } : null,
         distance_km: travelInfo?.distance ? parseInt(travelInfo.distance.split('-')[0]) || null : null,
-        status: 'planned' as 'planned' | 'ongoing' | 'completed' | 'cancelled'
+        budget: formData.budget || 0,
+        status: 'planned' as 'planned' | 'ongoing' | 'completed' | 'cancelled',
+        notes: formData.specialRequirements || null
       }
 
       const { error } = await supabase

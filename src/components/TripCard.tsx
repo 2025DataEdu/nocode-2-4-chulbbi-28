@@ -36,10 +36,15 @@ export function TripCard({
   const config = statusConfig[status] || statusConfig.planned
   const spentPercentage = budget > 0 ? (spent / budget) * 100 : 0
   
+  const handleCardClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    navigate(`/trip/${id}`)
+  }
+
   return (
     <Card 
       className="group hover:shadow-lg transition-all duration-300 cursor-pointer animate-fade-in bg-gradient-card border-0 shadow-md overflow-hidden"
-      onClick={() => navigate(`/trip/${id}`)}
+      onClick={handleCardClick}
     >
       <CardContent className="p-6">
         {/* 헤더 - 목적지와 상태 */}
