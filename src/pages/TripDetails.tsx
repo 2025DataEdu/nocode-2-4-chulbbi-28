@@ -116,39 +116,49 @@ export default function TripDetails() {
   const calculateProgress = () => {
     if (!trip) return 0
     
-    const now = getKoreanTime()
-    const start = new Date(trip.start_date + 'T00:00:00')
-    const end = new Date(trip.end_date + 'T23:59:59')
+    const today = getKoreanDate()
+    const start = new Date(trip.start_date)
+    const end = new Date(trip.end_date)
     
-    if (now < start) return 0
-    if (now > end) return 100
+    if (today < start) return 0
+    if (today > end) return 100
     
     const total = end.getTime() - start.getTime()
-    const elapsed = now.getTime() - start.getTime()
+    const elapsed = today.getTime() - start.getTime()
     
     return Math.round((elapsed / total) * 100)
   }
 
-  // 한국시간 기준 현재 시간 가져오기
-  const getKoreanTime = () => {
+  // 한국시간 기준 현재 날짜 가져오기 (날짜만)
+  const getKoreanDate = () => {
     const now = new Date()
-    // 한국시간(UTC+9) 기준으로 변환
-    const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000))
-    return koreanTime
+    // 한국시간으로 변환된 날짜 문자열 생성 (YYYY-MM-DD 형식)
+    const koreanDateString = now.toLocaleDateString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).replace(/\. /g, '-').replace('.', '')
+    
+    return new Date(koreanDateString)
   }
 
   // 실제 날짜에 따른 현재 출장 상태 계산
   const calculateRealStatus = () => {
     if (!trip) return trip?.status || 'planned'
     
-    const now = getKoreanTime()
-    const start = new Date(trip.start_date + 'T00:00:00')
-    const end = new Date(trip.end_date + 'T23:59:59')
+    const today = getKoreanDate()
+    const start = new Date(trip.start_date)
+    const end = new Date(trip.end_date)
     
-    // 현재 날짜 기준으로 실제 상태 결정
-    if (now < start) {
+    console.log('한국시간 오늘:', today.toISOString().split('T')[0])
+    console.log('출장 시작일:', trip.start_date)
+    console.log('출장 종료일:', trip.end_date)
+    
+    // 날짜만 비교 (시간 제외)
+    if (today < start) {
       return 'planned' // 아직 시작 전
-    } else if (now >= start && now <= end) {
+    } else if (today >= start && today <= end) {
       return 'ongoing' // 진행 중
     } else {
       return 'completed' // 완료
@@ -158,19 +168,25 @@ export default function TripDetails() {
   const getDaysRemaining = () => {
     if (!trip) return 0
     
-    const now = getKoreanTime()
-    const start = new Date(trip.start_date + 'T00:00:00')
-    const end = new Date(trip.end_date + 'T23:59:59')
+    const today = getKoreanDate()
+    const start = new Date(trip.start_date)
+    const end = new Date(trip.end_date)
     const realStatus = calculateRealStatus()
+    
+    console.log('날짜 계산 - 오늘:', today.toISOString().split('T')[0])
     
     if (realStatus === 'ongoing') {
       // 진행중인 경우 종료까지의 날짜
-      const diffTime = end.getTime() - now.getTime()
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      const diffTime = end.getTime() - today.getTime()
+      const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      console.log('진행중 - 종료까지:', days, '일')
+      return days
     } else if (realStatus === 'planned') {
       // 예정인 경우 시작까지의 날짜
-      const diffTime = start.getTime() - now.getTime()
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      const diffTime = start.getTime() - today.getTime()
+      const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      console.log('예정 - 시작까지:', days, '일')
+      return days
     }
     
     return 0 // 완료된 경우는 0
