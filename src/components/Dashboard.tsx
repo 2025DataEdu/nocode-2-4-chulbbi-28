@@ -1,172 +1,148 @@
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TripCard } from "./TripCard"
-import { Plus, BarChart3, Calendar, MapPin, Building, Utensils, Camera } from "lucide-react"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/hooks/useAuth"
-import { useNavigate } from "react-router-dom"
-import { useToast } from "@/hooks/use-toast"
-import { TopNavigation } from "@/components/TopNavigation"
-
-
-
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TripCard } from "./TripCard";
+import { Plus, BarChart3, Calendar, MapPin, Building, Utensils, Camera } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { TopNavigation } from "@/components/TopNavigation";
 export function Dashboard() {
-  const [trips, setTrips] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeView, setActiveView] = useState<'ongoing' | 'planned' | 'completed' | 'all'>('ongoing')
-  const { user } = useAuth()
-  const navigate = useNavigate()
-  const { toast } = useToast()
-
-  // 출장 상세에서 돌아올 때 상태 확인
+  const [trips, setTrips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState<'ongoing' | 'planned' | 'completed' | 'all'>('ongoing');
+  const {
+    user
+  } = useAuth();
+  const navigate = useNavigate();
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
-    const returnedFromTripDetail = localStorage.getItem('returnedFromTripDetail')
-    if (returnedFromTripDetail) {
-      const tripStatus = localStorage.getItem('lastViewedTripStatus')
-      if (tripStatus && ['ongoing', 'planned', 'completed'].includes(tripStatus)) {
-        setActiveView(tripStatus as 'ongoing' | 'planned' | 'completed')
-      }
-      // 사용 후 제거
-      localStorage.removeItem('returnedFromTripDetail')
-      localStorage.removeItem('lastViewedTripStatus')
-    }
-  }, [])
-
-  useEffect(() => {
-    console.log('Dashboard: user state changed:', user?.id)
+    console.log('Dashboard: user state changed:', user?.id);
     if (user?.id) {
-      fetchTrips()
+      fetchTrips();
     } else {
-      console.log('Dashboard: no user, setting loading to false')
-      setLoading(false)
+      console.log('Dashboard: no user, setting loading to false');
+      setLoading(false);
     }
-  }, [user])
+  }, [user]);
 
   // 출장 업데이트 이벤트 리스너
   useEffect(() => {
     const handleTripUpdate = () => {
       if (user) {
-        fetchTrips()
+        fetchTrips();
       }
-    }
-
-    window.addEventListener('tripUpdated', handleTripUpdate)
-    return () => window.removeEventListener('tripUpdated', handleTripUpdate)
-  }, [user])
-
+    };
+    window.addEventListener('tripUpdated', handleTripUpdate);
+    return () => window.removeEventListener('tripUpdated', handleTripUpdate);
+  }, [user]);
   const fetchTrips = async () => {
     try {
       console.log('Fetching trips for user:', user?.id);
-      
-      const { data, error } = await supabase
-        .from('trips')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-
+      const {
+        data,
+        error
+      } = await supabase.from('trips').select('*').eq('user_id', user?.id).order('created_at', {
+        ascending: false
+      });
       if (error) {
         console.error('Supabase error fetching trips:', error);
         toast({
           title: "데이터 로딩 실패",
           description: "출장 정보를 불러오는 중 오류가 발생했습니다.",
-          variant: "destructive",
-        })
-        setTrips([])
-        setLoading(false)
-        return
+          variant: "destructive"
+        });
+        setTrips([]);
+        setLoading(false);
+        return;
       }
-      
       console.log('Fetched trips:', data);
-      setTrips(data || [])
+      setTrips(data || []);
     } catch (error) {
-      console.error('Error fetching trips:', error)
+      console.error('Error fetching trips:', error);
       toast({
-        title: "오류 발생", 
+        title: "오류 발생",
         description: "출장 데이터를 불러올 수 없습니다.",
-        variant: "destructive",
-      })
-      setTrips([])
+        variant: "destructive"
+      });
+      setTrips([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // 현재 날짜 기준으로 출장 상태 계산
   const calculateTripStatus = (startDate: string, endDate: string) => {
-    const today = new Date()
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    
+    const today = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
     // 시간 부분을 제거하고 날짜만 비교
-    today.setHours(0, 0, 0, 0)
-    start.setHours(0, 0, 0, 0)
-    end.setHours(0, 0, 0, 0)
-    
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
     if (today < start) {
-      return 'planned'
+      return 'planned';
     } else if (today >= start && today <= end) {
-      return 'ongoing'
+      return 'ongoing';
     } else {
-      return 'completed'
+      return 'completed';
     }
-  }
+  };
 
   // 출장 데이터에 실제 상태 적용
   const tripsWithRealStatus = trips.map(trip => ({
     ...trip,
     realStatus: calculateTripStatus(trip.start_date, trip.end_date)
-  }))
-
-  const ongoingTrips = tripsWithRealStatus.filter(trip => trip.realStatus === 'ongoing')
-  const plannedTrips = tripsWithRealStatus.filter(trip => trip.realStatus === 'planned')
-  const completedTrips = tripsWithRealStatus.filter(trip => trip.realStatus === 'completed')
-  const totalTrips = trips.length
-
+  }));
+  const ongoingTrips = tripsWithRealStatus.filter(trip => trip.realStatus === 'ongoing');
+  const plannedTrips = tripsWithRealStatus.filter(trip => trip.realStatus === 'planned');
+  const completedTrips = tripsWithRealStatus.filter(trip => trip.realStatus === 'completed');
+  const totalTrips = trips.length;
   const getActiveTrips = () => {
-    switch(activeView) {
-      case 'ongoing': return ongoingTrips
-      case 'planned': return plannedTrips
-      case 'completed': return completedTrips
-      case 'all': return tripsWithRealStatus
-      default: return ongoingTrips
+    switch (activeView) {
+      case 'ongoing':
+        return ongoingTrips;
+      case 'planned':
+        return plannedTrips;
+      case 'completed':
+        return completedTrips;
+      case 'all':
+        return tripsWithRealStatus;
+      default:
+        return ongoingTrips;
     }
-  }
-
-  const statsCards = [
-    {
-      title: "진행중인 출장",
-      value: ongoingTrips.length.toString(),
-      subtitle: "건",
-      icon: Calendar,
-      variant: "primary" as const,
-    },
-    {
-      title: "등록된 출장지",
-      value: new Set(tripsWithRealStatus.map(trip => trip.destination)).size.toString(),
-      subtitle: "곳",
-      icon: MapPin,
-      variant: "secondary" as const,
-    },
-    {
-      title: "예정된 출장",
-      value: plannedTrips.length.toString(),
-      subtitle: "건", 
-      icon: Calendar,
-      variant: "accent" as const,
-    },
-    {
-      title: "완료된 출장",
-      value: completedTrips.length.toString(),
-      subtitle: "건",
-      icon: BarChart3,
-      variant: "accent" as const,
-    }
-  ]
-
-  return (
-    <div className="min-h-screen bg-background">
+  };
+  const statsCards = [{
+    title: "진행중인 출장",
+    value: ongoingTrips.length.toString(),
+    subtitle: "건",
+    icon: Calendar,
+    variant: "primary" as const
+  }, {
+    title: "등록된 출장지",
+    value: new Set(tripsWithRealStatus.map(trip => trip.destination)).size.toString(),
+    subtitle: "곳",
+    icon: MapPin,
+    variant: "secondary" as const
+  }, {
+    title: "예정된 출장",
+    value: plannedTrips.length.toString(),
+    subtitle: "건",
+    icon: Calendar,
+    variant: "accent" as const
+  }, {
+    title: "완료된 출장",
+    value: completedTrips.length.toString(),
+    subtitle: "건",
+    icon: BarChart3,
+    variant: "accent" as const
+  }];
+  return <div className="min-h-screen bg-background">
       <TopNavigation />
       
       <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in-up pb-24">
@@ -178,12 +154,7 @@ export function Dashboard() {
           </h1>
           <p className="text-body text-muted-foreground">오늘도 즐거운 출장 되세요</p>
         </div>
-        <Button 
-          variant="gradient"
-          size="lg"
-          className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
-          onClick={() => navigate('/register')}
-        >
+        <Button variant="gradient" size="lg" className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300" onClick={() => navigate('/register')}>
           <Plus className="mr-2 h-5 w-5" />
           새 출장 계획
         </Button>
@@ -206,11 +177,13 @@ export function Dashboard() {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-card shadow-md hover:shadow-lg transition-all duration-300 animate-scale-in border-0" style={{ animationDelay: '0.1s' }}>
+        <Card className="bg-gradient-card shadow-md hover:shadow-lg transition-all duration-300 animate-scale-in border-0" style={{
+          animationDelay: '0.1s'
+        }}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-caption font-medium">방문 예정</p>
+                <p className="text-muted-foreground text-caption font-medium">내 출장</p>
                 <p className="text-title font-bold text-foreground">{plannedTrips.length}건</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {plannedTrips.length > 0 ? plannedTrips.map(trip => trip.destination).slice(0, 2).join(', ') : '없음'}
@@ -223,7 +196,9 @@ export function Dashboard() {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-card shadow-md hover:shadow-lg transition-all duration-300 animate-scale-in border-0 sm:col-span-2 lg:col-span-1" style={{ animationDelay: '0.2s' }}>
+        <Card className="bg-gradient-card shadow-md hover:shadow-lg transition-all duration-300 animate-scale-in border-0 sm:col-span-2 lg:col-span-1" style={{
+          animationDelay: '0.2s'
+        }}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -248,42 +223,24 @@ export function Dashboard() {
           </div>
           <Tabs value={activeView} onValueChange={(value: string) => setActiveView(value as 'ongoing' | 'planned' | 'completed' | 'all')} className="w-auto">
             <TabsList className="grid grid-cols-4 h-10 bg-muted/50 p-1 rounded-lg">
-              <TabsTrigger 
-                value="ongoing" 
-                className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                onMouseEnter={() => setActiveView('ongoing')}
-              >
+              <TabsTrigger value="ongoing" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 진행중
               </TabsTrigger>
-              <TabsTrigger 
-                value="planned" 
-                className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                onMouseEnter={() => setActiveView('planned')}
-              >
+              <TabsTrigger value="planned" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 예정
               </TabsTrigger>
-              <TabsTrigger 
-                value="completed" 
-                className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                onMouseEnter={() => setActiveView('completed')}
-              >
+              <TabsTrigger value="completed" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 완료
               </TabsTrigger>
-              <TabsTrigger 
-                value="all" 
-                className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                onMouseEnter={() => setActiveView('all')}
-              >
+              <TabsTrigger value="all" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 전체
               </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
-        {loading ? (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 auto-rows-max">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="bg-gradient-card border-0 shadow-md animate-pulse">
+        {loading ? <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 auto-rows-max">
+            {[1, 2, 3].map(i => <Card key={i} className="bg-gradient-card border-0 shadow-md animate-pulse">
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     <div className="h-5 bg-muted rounded-lg w-3/4"></div>
@@ -292,29 +249,14 @@ export function Dashboard() {
                     <div className="h-2 bg-muted rounded-full w-full"></div>
                   </div>
                 </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : getActiveTrips().length > 0 ? (
-          <div 
-            key={activeView} 
-            className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 auto-rows-max animate-fade-in"
-          >
-            {getActiveTrips().map((trip, index) => (
-              <div 
-                key={trip.id}
-                className="animate-scale-in"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
+              </Card>)}
+          </div> : getActiveTrips().length > 0 ? <div key={activeView} className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 auto-rows-max animate-fade-in">
+            {getActiveTrips().map((trip, index) => <div key={trip.id} className="animate-scale-in" style={{
+            animationDelay: `${index * 0.05}s`
+          }}>
                 <TripCard {...trip} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Card 
-            key={`empty-${activeView}`} 
-            className="bg-gradient-card border-0 shadow-md animate-fade-in"
-          >
+              </div>)}
+          </div> : <Card key={`empty-${activeView}`} className="bg-gradient-card border-0 shadow-md animate-fade-in">
             <CardContent className="p-12 text-center">
               <div className="space-y-6">
                 <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto shadow-lg">
@@ -322,31 +264,21 @@ export function Dashboard() {
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-title font-semibold text-foreground">
-                    {activeView === 'ongoing' ? '진행중인 출장이 없어요' :
-                     activeView === 'planned' ? '예정된 출장이 없어요' :
-                     activeView === 'completed' ? '완료된 출장이 없어요' :
-                     '첫 출장을 계획해보세요'}
+                    {activeView === 'ongoing' ? '진행중인 출장이 없어요' : activeView === 'planned' ? '예정된 출장이 없어요' : activeView === 'completed' ? '완료된 출장이 없어요' : '첫 출장을 계획해보세요'}
                   </h3>
                   <p className="text-body text-muted-foreground max-w-sm mx-auto">
                     출삐와 함께 스마트한 출장을 시작해보세요
                   </p>
                 </div>
-                <Button 
-                  variant="gradient"
-                  size="lg"
-                  className="shadow-lg hover:shadow-xl transition-all duration-300"
-                  onClick={() => navigate('/register')}
-                >
+                <Button variant="gradient" size="lg" className="shadow-lg hover:shadow-xl transition-all duration-300" onClick={() => navigate('/register')}>
                   <Plus className="w-5 h-5 mr-2" />
                   출장 계획하기
                 </Button>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
       </div>
 
       </div>
-    </div>
-  )
+    </div>;
 }
