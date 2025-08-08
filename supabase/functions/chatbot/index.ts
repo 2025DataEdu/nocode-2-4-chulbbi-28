@@ -701,23 +701,21 @@ ${attractionData}
           const keywordMatchCount = keywordResults.length
           console.log(`Found ${keywordMatchCount} keyword matches`)
 
-          // *** 핵심 개선: 10% 유사도 기준 적용 ***
-          // 최고 유사도가 10% (0.1) 이상인 경우에만 사용자 문서 우선 활용
+          // 사용자 문서 기반 RAG 우선 원칙
           const hasAnyDocuments = uniqueResults.length > 0
           const hasKeywordMatches = keywordMatchCount > 0
           const hasSimilarityMatches = highSimilarityMatches.length > 0
           
-          // 최고 유사도 점수 확인 (10% 이상인지 판단)
+          // 최고 유사도 점수 확인
           const maxSimilarity = uniqueResults.length > 0 ? Math.max(...uniqueResults.map(doc => doc.similarity || 0)) : 0
-          const SIMILARITY_THRESHOLD = 0.1 // 10% 기준
           
-          // 관련성 재평가: 최고 유사도가 10% 이상일 때만 사용자 문서를 우선 활용
-          // 이는 새로운 RAG 원칙에 따라 엄격한 유사도 기준을 적용
-          hasRelevantDocuments = hasAnyDocuments && maxSimilarity >= SIMILARITY_THRESHOLD
+          // 관련성 판단: 유사도 점수와 키워드 매칭을 모두 고려
+          // 사용자 문서가 있으면 우선적으로 활용 (웹 검색 최소화)
+          hasRelevantDocuments = hasAnyDocuments && (hasSimilarityMatches || hasKeywordMatches)
           
           console.log(`Document availability: any=${hasAnyDocuments}, keywords=${hasKeywordMatches}, similarity=${hasSimilarityMatches}`)
-          console.log(`Max similarity: ${(maxSimilarity * 100).toFixed(1)}%, threshold: ${(SIMILARITY_THRESHOLD * 100).toFixed(1)}%`)
-          console.log(`Final relevance decision: ${hasRelevantDocuments} (similarity check: ${maxSimilarity >= SIMILARITY_THRESHOLD})`)
+          console.log(`Max similarity: ${(maxSimilarity * 100).toFixed(1)}%, threshold: 10.0%`)
+          console.log(`Final relevance decision: ${hasRelevantDocuments} (similarity check: ${hasSimilarityMatches || hasKeywordMatches})`)
 
           if (hasRelevantDocuments) {
             // 키워드 매칭 결과와 유사도 높은 결과를 우선하여 최대 10개 선택
