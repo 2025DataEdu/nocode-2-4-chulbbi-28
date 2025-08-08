@@ -75,33 +75,67 @@ export default function Settings() {
 
   const handleProfileUpdate = async () => {
     if (!user || !profile) return;
-    
+
+    // 입력 값 검증
+    if (!profile.user_type) {
+      toast({
+        title: "입력 오류",
+        description: "사용자 유형을 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 유효한 user_type 값인지 확인
+    const validUserTypes = ['공무원', '공공기관', '기타'];
+    if (!validUserTypes.includes(profile.user_type)) {
+      toast({
+        title: "입력 오류",
+        description: "올바른 사용자 유형을 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const { error } = await supabase
         .from('profiles')
         .update({
           user_type: profile.user_type as '공무원' | '공공기관' | '기타',
-          organization: profile.organization,
-          base_location: profile.base_location,
-          username: profile.username,
+          organization: profile.organization || null,
+          base_location: profile.base_location || null,
+          username: profile.username || null,
         })
         .eq('user_id', user.id);
-      
+
       if (error) {
-        throw error;
+        console.error('Profile update error:', error);
+        let errorMessage = "프로필 정보 업데이트 중 오류가 발생했습니다.";
+        
+        if (error.code === '22P02') {
+          errorMessage = "입력한 정보의 형식이 올바르지 않습니다. 다시 확인해주세요.";
+        } else if (error.message?.includes('row-level security')) {
+          errorMessage = "접근 권한이 없습니다. 다시 로그인해주세요.";
+        }
+        
+        toast({
+          title: "프로필 업데이트 실패",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "프로필 업데이트 완료",
+          description: "프로필 정보가 성공적으로 업데이트되었습니다.",
+        });
       }
-      
-      toast({
-        title: "설정 저장 완료",
-        description: "프로필 정보가 성공적으로 업데이트되었습니다."
-      });
     } catch (error) {
       console.error('Profile update error:', error);
       toast({
-        title: "저장 실패",
-        description: "프로필 업데이트 중 오류가 발생했습니다.",
-        variant: "destructive"
+        title: "프로필 업데이트 실패",
+        description: "프로필 정보 업데이트 중 오류가 발생했습니다.",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -175,8 +209,7 @@ export default function Settings() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="공무원">공무원</SelectItem>
-                          <SelectItem value="교직원">교직원</SelectItem>
-                          <SelectItem value="직장인">직장인</SelectItem>
+                          <SelectItem value="공공기관">공공기관 직원</SelectItem>
                           <SelectItem value="기타">기타</SelectItem>
                         </SelectContent>
                       </Select>

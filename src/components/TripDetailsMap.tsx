@@ -77,7 +77,11 @@ export function TripDetailsMap({ destination, latitude, longitude }: TripDetails
 
       console.log('Initializing map for:', destination, 'at coordinates:', lat, lng)
 
-      // 지도 초기화
+      // DOM이 완전히 준비될 때까지 대기
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // 지도 초기화 (DOM 요소 재확인)
+      if (!mapRef.current) return
       mapInstance = L.map(mapRef.current).setView([lat, lng], 14)
 
       // OpenStreetMap 타일 레이어 추가
@@ -103,14 +107,21 @@ export function TripDetailsMap({ destination, latitude, longitude }: TripDetails
           setPois(Array.isArray(poisData) ? poisData : [])
 
           // POI 마커 추가
-          if (Array.isArray(poisData)) {
+          if (Array.isArray(poisData) && mapInstance) {
             poisData.forEach((poi) => {
-              const icon = getMarkerIcon(poi.type)
-              const poiMarker = L.marker([poi.lat, poi.lng], { icon })
-                .addTo(mapInstance!)
-                .bindPopup(`<b>${poi.name}</b><br>${poi.type}<br>${poi.description || ''}`)
-              
-              markers.push(poiMarker)
+              try {
+                const icon = getMarkerIcon(poi.type)
+                const poiMarker = L.marker([poi.lat, poi.lng], { icon })
+                
+                // 지도가 준비되었는지 확인 후 추가
+                if (mapInstance && mapInstance.getContainer()) {
+                  poiMarker.addTo(mapInstance)
+                    .bindPopup(`<b>${poi.name}</b><br>${poi.type}<br>${poi.description || ''}`)
+                  markers.push(poiMarker)
+                }
+              } catch (error) {
+                console.warn('Failed to add POI marker:', poi.name, error)
+              }
             })
           }
         } else {
@@ -147,12 +158,19 @@ export function TripDetailsMap({ destination, latitude, longitude }: TripDetails
         
         // Fallback POI 마커 추가
         fallbackPois.forEach((poi) => {
-          const icon = getMarkerIcon(poi.type)
-          const poiMarker = L.marker([poi.lat, poi.lng], { icon })
-            .addTo(mapInstance!)
-            .bindPopup(`<b>${poi.name}</b><br>${poi.type}<br>${poi.description || ''}`)
-          
-          markers.push(poiMarker)
+          try {
+            const icon = getMarkerIcon(poi.type)
+            const poiMarker = L.marker([poi.lat, poi.lng], { icon })
+            
+            // 지도가 준비되었는지 확인 후 추가
+            if (mapInstance && mapInstance.getContainer()) {
+              poiMarker.addTo(mapInstance)
+                .bindPopup(`<b>${poi.name}</b><br>${poi.type}<br>${poi.description || ''}`)
+              markers.push(poiMarker)
+            }
+          } catch (error) {
+            console.warn('Failed to add fallback POI marker:', poi.name, error)
+          }
         })
       } finally {
         setLoading(false)
