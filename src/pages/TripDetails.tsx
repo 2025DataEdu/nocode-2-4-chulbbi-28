@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { TripDetailsMap } from '@/components/TripDetailsMap'
-import { DetailedRecommendations } from '@/components/DetailedRecommendations'
+
 import { TripChecklist } from '@/components/TripChecklist'
 import { ArrowLeft, Calendar, MapPin, Clock, Users, Edit3, Share2, Save, X } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
@@ -443,26 +443,22 @@ export default function TripDetails() {
       </Card>
 
       {/* 지도 및 추천 장소 */}
-            <Tabs defaultValue="checklist" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="checklist">체크리스트</TabsTrigger>
-                <TabsTrigger value="map">위치 및 기본 정보</TabsTrigger>
-                <TabsTrigger value="recommendations">상세 추천 정보</TabsTrigger>
-              </TabsList>
-              <TabsContent value="checklist" className="mt-6">
-                <TripChecklist tripId={trip.id} tripStatus={trip.status} />
-              </TabsContent>
-              <TabsContent value="map" className="mt-6">
-                <TripDetailsMap 
-                  destination={trip.destination}
-                  latitude={coordinates?.lat}
-                  longitude={coordinates?.lng}
-                />
-              </TabsContent>
-              <TabsContent value="recommendations" className="mt-6">
-                <DetailedRecommendations destination={trip.destination} />
-              </TabsContent>
-            </Tabs>
+      <Tabs defaultValue="checklist" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="checklist">체크리스트</TabsTrigger>
+          <TabsTrigger value="map">위치 및 기본 정보</TabsTrigger>
+        </TabsList>
+        <TabsContent value="checklist" className="mt-6">
+          <TripChecklist tripId={trip.id} tripStatus={trip.status} />
+        </TabsContent>
+        <TabsContent value="map" className="mt-6">
+          <TripDetailsMap 
+            destination={trip.destination}
+            latitude={coordinates?.lat}
+            longitude={coordinates?.lng}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* 편집 다이얼로그 - 오버레이 없이 */}
       {isEditDialogOpen && (
