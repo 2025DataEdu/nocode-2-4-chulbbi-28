@@ -223,3 +223,58 @@ export function normalizeRegion(destination: string): string {
   if (destination.includes('제주')) return '제주';
   return '서울'; // 기본값
 }
+
+/**
+ * 두 좌표 간 거리(km) - Haversine 공식
+ */
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (v: number) => (v * Math.PI) / 180;
+  const R = 6371; // km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * 주소 기반 거리 계산 (지오코딩 사용)
+ */
+export async function calculateDistanceByAddress(
+  departureAddress: string,
+  destinationAddress: string
+): Promise<DistanceResult | null> {
+  try {
+    const dep = await GeocodingService.geocode(departureAddress);
+    const dest = await GeocodingService.geocode(destinationAddress);
+
+    if (!dep || !dest) return null;
+
+    const distanceKm = Math.round(haversineDistance(dep.lat, dep.lng, dest.lat, dest.lng));
+
+    // 평균 속도 80km/h 기준 시간 계산
+    const hoursFloat = distanceKm / 80;
+    const hours = Math.floor(hoursFloat);
+    const minutes = Math.round((hoursFloat - hours) * 60);
+    const durationText = hours > 0
+      ? `${hours}시간${minutes > 0 ? ` ${minutes}분` : ''}`
+      : `${Math.max(1, Math.round(hoursFloat * 60))}분`;
+
+    // 지역 기반 구분 (기본 로직 유지)
+    const depRegion = normalizeRegion(departureAddress);
+    const destRegion = normalizeRegion(destinationAddress);
+    const type: 'internal' | 'external' = depRegion === destRegion ? 'internal' : 'external';
+
+    return {
+      distance: `${distanceKm}km`,
+      duration: durationText,
+      type,
+    };
+  } catch (e) {
+    console.error('calculateDistanceByAddress error:', e);
+    return null;
+  }
+}
