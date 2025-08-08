@@ -14,6 +14,7 @@ import Manage from "./pages/Manage";
 import Receipts from "./pages/Receipts";
 import Settings from "./pages/Settings";
 import TripDetails from "./pages/TripDetails";
+import DocumentManage from "./pages/DocumentManage";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -82,6 +83,7 @@ function AppContent() {
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
             <Route path="/manage" element={<Manage />} />
+            <Route path="/documents" element={<DocumentManage />} />
             <Route path="/receipts" element={<Receipts />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/trip/:id" element={<TripDetails />} />

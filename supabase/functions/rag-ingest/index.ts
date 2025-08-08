@@ -84,8 +84,8 @@ serve(async (req) => {
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         
-        // 임베딩 생성
-        const embedding = generateSimpleEmbedding(chunk.content);
+        // OpenAI 임베딩 생성
+        const embedding = await generateEmbedding(chunk.content);
         
         const documentData = {
           user_id: targetUserId,
@@ -126,7 +126,7 @@ serve(async (req) => {
         for (let i = 0; i < documentChunks.length; i++) {
           const chunk = documentChunks[i];
           
-          const embedding = generateSimpleEmbedding(chunk);
+          const embedding = await generateEmbedding(chunk);
           
           const documentData = {
             user_id: targetUserId,
@@ -230,7 +230,43 @@ function splitIntoChunks(text: string, maxChunkSize: number): string[] {
   return chunks;
 }
 
-// 간단한 임베딩 생성 함수 (실제로는 OpenAI 등 사용)
+// OpenAI를 사용한 실제 임베딩 생성 함수
+async function generateEmbedding(text: string): Promise<number[]> {
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  
+  if (!openAIApiKey) {
+    console.warn('OpenAI API key not found, using simple embedding');
+    return generateSimpleEmbedding(text);
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: text,
+        dimensions: 1536
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status);
+      return generateSimpleEmbedding(text);
+    }
+
+    const data = await response.json();
+    return data.data[0].embedding;
+  } catch (error) {
+    console.error('Error generating embedding:', error);
+    return generateSimpleEmbedding(text);
+  }
+}
+
+// 간단한 임베딩 생성 함수 (백업용)
 function generateSimpleEmbedding(text: string): number[] {
   // 간단한 해시 기반 임베딩 (실제 사용 시에는 OpenAI API 등 사용)
   const embedding: number[] = new Array(1536).fill(0);

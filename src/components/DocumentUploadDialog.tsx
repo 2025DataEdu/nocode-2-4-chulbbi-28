@@ -55,38 +55,67 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     // 표 구조를 개선하여 더 명확하게 만들기
     let enhanced = text;
     
-    // 연속된 공백을 줄여서 표 구조 개선
-    enhanced = enhanced.replace(/\s{3,}/g, ' | ');
+    // 연속된 공백을 탭이나 구분자로 변환
+    enhanced = enhanced.replace(/\s{2,}/g, ' | ');
     
     // 숫자와 단위가 붙어있는 경우 공백 추가
-    enhanced = enhanced.replace(/(\d+)(원|%|명|일|시간|분|년|월|개|건)/g, '$1$2');
+    enhanced = enhanced.replace(/(\d+)(원|%|명|일|시간|분|년|월|개|건|급|등|호|차)/g, '$1$2');
     
-    // 표 헤더 같은 패턴 감지 및 개선
-    enhanced = enhanced.replace(/([가-힣]+)\s*([가-힣]+)\s*([가-힣]+)\s*([가-힣]+)/g, '$1 | $2 | $3 | $4');
+    // 표 행 구분을 명확하게
+    enhanced = enhanced.replace(/\n\s*\n/g, '\n');
+    
+    // "[별표]" 관련 내용 강화
+    enhanced = enhanced.replace(/(\[별표[^\]]*\])/g, '\n\n**[중요표]** $1');
     
     return enhanced;
   };
 
   const extractSpecialTables = (text: string): { tables: string[], cleanedText: string } => {
-    const tablePattern = /(\[별표\s*\d*\].*?)(?=\[별표\s*\d*\]|$)/gs;
+    // "[별표]"로 시작하는 섹션을 추출하는 정규식 개선
+    const tablePattern = /(\[별표[^\]]*\][\s\S]*?)(?=\[별표[^\]]*\]|$)/g;
     const tables: string[] = [];
+    const cleanedSections: string[] = [];
+    let lastIndex = 0;
     let match;
     
     while ((match = tablePattern.exec(text)) !== null) {
+      // 매치 이전 텍스트 저장
+      if (match.index > lastIndex) {
+        cleanedSections.push(text.slice(lastIndex, match.index));
+      }
+      
       let tableContent = match[1].trim();
-      // 표 내용 구조화
+      
+      // 표 내용 후처리 및 구조화
       tableContent = enhanceTableStructure(tableContent);
       
+      // "[별표]" 내용에 특별 마커 추가 (검색 우선순위 상승용)
+      const enhancedTable = `**[최우선_별표_내용]** ${tableContent}
+      
+**[표_구조_요약]** 이 내용은 중요한 기준표나 규정표입니다.
+**[검색_키워드]** 별표 표 기준 규정 한도 금액 지급 수당 여비 교통비 숙박비 식비`;
+      
       // 표 내용이 충분히 길면 독립적으로 처리
-      if (tableContent.length > 100) {
-        tables.push(`**[중요표]** ${tableContent}`);
+      if (tableContent.length > 50) {
+        tables.push(enhancedTable);
       }
+      
+      lastIndex = match.index + match[0].length;
     }
     
-    return { tables, cleanedText: text };
+    // 남은 텍스트 추가
+    if (lastIndex < text.length) {
+      cleanedSections.push(text.slice(lastIndex));
+    }
+    
+    const cleanedText = cleanedSections.join('');
+    
+    console.log(`"[별표]" 표 ${tables.length}개를 추출했습니다.`);
+    
+    return { tables, cleanedText };
   };
 
-  const chunkText = (text: string, size = 500, overlap = 50): ChunkItem[] => {
+  const chunkText = (text: string, size = 400, overlap = 50): ChunkItem[] => {
     // 먼저 "[별표]" 표들을 추출
     const { tables, cleanedText } = extractSpecialTables(text);
     
@@ -94,29 +123,69 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     const chunks: ChunkItem[] = [];
     let index = 0;
     
-    // 1. 먼저 "[별표]" 표들을 우선순위 높게 추가 (더 작은 청크 크기)
+    // 1. 최우선: "[별표]" 표들을 가장 앞에 배치 (작은 청크 크기로 정밀 처리)
     tables.forEach(table => {
-      const tableChunks = table.match(/.{1,400}/g) || [table];
+      // "[별표]" 내용은 더 작은 단위로 청킹하여 정확도 향상
+      const tableChunks = [];
+      let i = 0;
+      while (i < table.length) {
+        const end = Math.min(i + 300, table.length); // 더 작은 청크
+        const piece = table.slice(i, end);
+        tableChunks.push(piece.trim());
+        i += 250; // 더 많은 중복으로 정확도 향상
+      }
+      
       tableChunks.forEach(chunk => {
-        chunks.push({ content: chunk.trim(), chunk_index: index++ });
+        if (chunk.length > 20) { // 너무 짧은 청크 제외
+          chunks.push({ 
+            content: `**[최우선순위_별표]** ${chunk}`, 
+            chunk_index: index++ 
+          });
+        }
       });
     });
     
-    // 2. 일반 텍스트 청킹
+    // 2. 일반 텍스트 청킹 (기존 로직 개선)
     let i = 0;
     while (i < cleaned.length) {
       const end = Math.min(i + size, cleaned.length);
       let piece = cleaned.slice(i, end);
       
-      // 청크에 "[별표]" 내용이 있으면 우선순위 표시 추가
-      if (piece.includes('[별표')) {
-        piece = `**[우선순위]** ${piece}`;
+      // 문장 경계에서 자르기 (더 자연스러운 청킹)
+      if (end < cleaned.length) {
+        const lastPeriod = piece.lastIndexOf('.');
+        const lastExclamation = piece.lastIndexOf('!');
+        const lastQuestion = piece.lastIndexOf('?');
+        const lastNewline = piece.lastIndexOf('\n');
+        
+        const lastSentenceEnd = Math.max(lastPeriod, lastExclamation, lastQuestion, lastNewline);
+        if (lastSentenceEnd > size * 0.5) { // 청크의 절반 이상인 경우에만 적용
+          piece = piece.slice(0, lastSentenceEnd + 1);
+        }
       }
       
-      chunks.push({ content: piece, chunk_index: index++ });
-      i += size - overlap;
+      // 청크에 "[별표]" 내용이 포함된 경우 우선순위 표시
+      if (piece.includes('[별표') || piece.includes('별표')) {
+        piece = `**[우선순위_별표포함]** ${piece}`;
+      }
+      
+      // 중요 키워드가 포함된 경우 우선순위 표시
+      const importantKeywords = ['한도', '기준', '지급', '수당', '여비', '교통비', '숙박비', '식비', '일비'];
+      const hasImportantKeyword = importantKeywords.some(keyword => piece.includes(keyword));
+      if (hasImportantKeyword && !piece.includes('**[우선순위')) {
+        piece = `**[중요규정]** ${piece}`;
+      }
+      
+      if (piece.trim().length > 20) { // 너무 짧은 청크 제외
+        chunks.push({ content: piece.trim(), chunk_index: index++ });
+      }
+      
+      // 다음 청크 시작점 계산
+      const actualPieceLength = piece.replace(/\*\*\[.*?\]\*\*\s*/, '').length;
+      i += Math.max(actualPieceLength - overlap, 10);
     }
     
+    console.log(`총 ${chunks.length}개 청크 생성 (별표 우선순위: ${tables.length}개)`);
     return chunks;
   };
 
@@ -160,16 +229,27 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         currentY = y;
       }
       
-      // "[별표]" 내용 강화
-      if (pageText.includes('[별표')) {
-        pageText = pageText.replace(/(\[별표[^\]]*\])/g, '\n\n**$1**\n');
+      // "[별표]" 내용 강화 및 OCR 스타일 후처리
+      if (pageText.includes('[별표') || pageText.includes('별표')) {
+        // "[별표]" 섹션 시작을 명확히 표시
+        pageText = pageText.replace(/(\[별표[^\]]*\])/g, '\n\n**[중요표_시작]** $1\n');
+        
+        // 표 형태의 데이터 구조 개선
+        pageText = pageText.replace(/([가-힣]+)\s+([0-9,]+원)\s+([가-힣]+)/g, '$1 | $2 | $3');
+        pageText = pageText.replace(/(\d+급)\s+(\d+원)\s+(\d+원)/g, '$1 | $2 | $3');
+        
+        console.log(`페이지 ${p}에서 "[별표]" 내용 발견 및 강화 완료`);
       }
+      
+      // 전체 텍스트에서 표 구조 개선
+      pageText = enhanceTableStructure(pageText);
       
       fullText += `\n\n[page ${p}]\n` + pageText;
     }
     
-    // 전체 텍스트에서 표 구조 개선
-    fullText = enhanceTableStructure(fullText);
+    // 문서 끝까지 처리 완료 후 최종 "[별표]" 검증
+    const byulpyoCount = (fullText.match(/\[별표/g) || []).length;
+    console.log(`PDF 전체에서 "[별표]" ${byulpyoCount}개 섹션을 감지했습니다.`);
     
     return fullText;
   };
@@ -189,11 +269,18 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     
     let text = result.value as string;
     
-    // "[별표]" 내용 강화
-    text = text.replace(/(\[별표[^\]]*\])/g, '\n\n**$1**\n');
+    // "[별표]" 내용 강화 및 구조 개선
+    text = text.replace(/(\[별표[^\]]*\])/g, '\n\n**[중요표_시작]** $1\n');
+    
+    // DOCX의 표 구조를 텍스트로 변환할 때 마크다운 형태로 정리
+    text = text.replace(/\t+/g, ' | '); // 탭을 구분자로
+    text = text.replace(/\n\s*\n\s*\n/g, '\n\n'); // 과도한 줄바꿈 정리
     
     // 표 구조 개선
     text = enhanceTableStructure(text);
+    
+    const byulpyoCount = (text.match(/\[별표/g) || []).length;
+    console.log(`DOCX에서 "[별표]" ${byulpyoCount}개 섹션을 감지했습니다.`);
     
     return text;
   };
@@ -220,7 +307,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         return;
       }
 
-      const chunks = chunkText(text, 500, 50);
+      const chunks = chunkText(text, 400, 50); // 더 작은 청크로 정밀도 향상
       if (chunks.length === 0) {
         toast({ title: "추출된 텍스트가 없습니다", variant: "destructive" });
         return;
