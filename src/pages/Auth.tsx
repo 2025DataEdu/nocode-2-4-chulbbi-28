@@ -122,6 +122,15 @@ export default function Auth() {
           setError("회원가입에 실패했습니다. 다시 시도해주세요.");
         }
       } else {
+        // 회원가입 완료 후 폼 초기화하고 로그인 화면으로 전환
+        setFormData({
+          username: "",
+          password: "",
+          userType: "",
+          organization: "",
+          baseLocation: ""
+        });
+        setUsernameAvailable(null);
         setError("");
         setIsLogin(true);
       }

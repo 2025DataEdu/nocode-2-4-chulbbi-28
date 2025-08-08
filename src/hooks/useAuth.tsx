@@ -64,7 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         toast.error(message);
       } else {
-        toast.success("회원가입이 완료되었습니다! 이메일을 확인해주세요.");
+        // 회원가입 완료 후 자동 로그인 방지를 위해 로그아웃
+        await supabase.auth.signOut();
+        toast.success("회원가입이 완료되었습니다! 로그인해주세요.");
       }
       
       return { error };
