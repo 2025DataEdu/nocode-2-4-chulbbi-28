@@ -41,6 +41,7 @@ function AppContent() {
   const { user, loading } = useAuth()
   const { isOffline } = useNetworkStatus()
   
+  // 로딩 중일 때는 항상 로딩 화면 표시
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -49,6 +50,7 @@ function AppContent() {
     )
   }
 
+  // 로딩이 완료된 후에만 인증 상태에 따라 화면 결정
   if (!user) {
     return (
       <Routes>
@@ -58,6 +60,7 @@ function AppContent() {
     )
   }
 
+  // 인증된 사용자의 메인 앱 화면
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden relative">
       {/* 오프라인 상태 표시 */}
