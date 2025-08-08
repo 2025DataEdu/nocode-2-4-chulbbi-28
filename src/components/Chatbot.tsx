@@ -400,7 +400,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
               value={inputMessage}
               onChange={handleInputChange}
               onKeyDown={handleKeyPress}
-              placeholder="메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
+              placeholder="메시지를 입력하세요..."
               disabled={isLoading}
               className="flex-1 min-h-[40px] max-h-[120px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               rows={1}
