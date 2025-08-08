@@ -122,9 +122,6 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
               content: msg.content
             }))
           }
-        },
-        headers: {
-          'Content-Type': 'application/json'
         }
       });
 
