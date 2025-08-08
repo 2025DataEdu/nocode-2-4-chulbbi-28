@@ -62,7 +62,7 @@ export function FormattedMessage({ content }: FormattedMessageProps) {
           ),
           // 단락 스타일링
           p: ({ children }) => (
-            <p className="mb-2 text-foreground leading-relaxed">
+            <p className="mb-2 text-foreground leading-relaxed whitespace-pre-wrap">
               {children}
             </p>
           ),
