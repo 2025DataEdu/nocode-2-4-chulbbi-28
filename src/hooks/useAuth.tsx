@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (mounted) {
         setLoading(false);
       }
-    }, 500); // 500ms 최소 로딩 시간
+    }, 2000); // 2000ms 최소 로딩 시간
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
