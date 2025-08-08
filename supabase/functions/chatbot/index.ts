@@ -651,6 +651,7 @@ ${attractionData}
           }
 
           // 사용자 문서에서 임베딩 벡터 기반 검색
+          // 중요: match_documents는 이미 user_id 필터가 적용되어 있음 (auth.uid() 사용)
           const { data: vectorResults, error: vectorError } = await supabase.rpc('match_documents', {
             query_embedding: embedding,
             match_count: 10
@@ -700,15 +701,15 @@ ${attractionData}
           const keywordMatchCount = keywordResults.length
           console.log(`Found ${keywordMatchCount} keyword matches`)
 
-          // *** 핵심 개선: 보다 관대한 관련성 판단 ***
-          // 1. 임베딩 유사도가 낮더라도 키워드 매칭이 있으면 관련성 있다고 판단
-          // 2. 문서가 존재하고 키워드나 유사도 중 하나라도 있으면 사용자 문서 우선
+          // *** 핵심 개선: 더욱 관대한 관련성 판단 ***
+          // 사용자 문서가 있으면 우선적으로 활용 (키워드나 유사도에 관계없이)
           const hasAnyDocuments = uniqueResults.length > 0
           const hasKeywordMatches = keywordMatchCount > 0
           const hasSimilarityMatches = highSimilarityMatches.length > 0
           
-          // 관련성 재평가: 더 관대한 기준 적용
-          hasRelevantDocuments = hasAnyDocuments && (hasKeywordMatches || hasSimilarityMatches)
+          // 관련성 재평가: 문서가 존재하면 사용자 문서를 우선 활용
+          // 이는 RAG 원칙 [1]에 따라 웹 검색보다 사용자 문서를 우선하기 위함
+          hasRelevantDocuments = hasAnyDocuments
           
           console.log(`Document availability: any=${hasAnyDocuments}, keywords=${hasKeywordMatches}, similarity=${hasSimilarityMatches}`)
           console.log(`Final relevance decision: ${hasRelevantDocuments}`)
