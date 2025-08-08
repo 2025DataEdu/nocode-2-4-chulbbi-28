@@ -73,24 +73,61 @@ serve(async (req) => {
     console.log('Received message:', message);
     console.log('User ID:', userId);
 
-    // 업로드된 문서 검색
+    // 업로드된 문서 검색 - "[별표]" 우선순위 적용
     let documentContext = '';
     if (userId) {
       try {
-        // 사용자 질문과 관련된 문서 청크 검색
-        const { data: documents, error: searchError } = await supabase
+        // 1. 먼저 "[별표]" 관련 중요 문서 청크를 우선 검색
+        const { data: priorityDocs, error: priorityError } = await supabase
           .from('documents')
           .select('content, doc_title, chunk_index')
           .eq('user_id', userId)
-          .limit(10);
+          .or('content.ilike.%[별표]%,content.ilike.%[중요표]%,content.ilike.%[우선순위]%')
+          .limit(5);
 
-        if (searchError) {
-          console.error('Document search error:', searchError);
-        } else if (documents && documents.length > 0) {
-          console.log(`Found ${documents.length} document chunks for user`);
-          documentContext = documents
-            .map(doc => `[${doc.doc_title}] ${doc.content}`)
-            .join('\n\n');
+        // 2. 일반 문서 청크도 검색
+        const { data: regularDocs, error: regularError } = await supabase
+          .from('documents')
+          .select('content, doc_title, chunk_index')
+          .eq('user_id', userId)
+          .limit(8);
+
+        if (priorityError) {
+          console.error('Priority document search error:', priorityError);
+        }
+        if (regularError) {
+          console.error('Regular document search error:', regularError);
+        }
+
+        // 우선순위 문서를 먼저 배치하고 중복 제거
+        const allDocs = [...(priorityDocs || [])];
+        const priorityDocIds = new Set(priorityDocs?.map(doc => `${doc.doc_title}-${doc.chunk_index}`) || []);
+        
+        (regularDocs || []).forEach(doc => {
+          const docId = `${doc.doc_title}-${doc.chunk_index}`;
+          if (!priorityDocIds.has(docId)) {
+            allDocs.push(doc);
+          }
+        });
+
+        if (allDocs && allDocs.length > 0) {
+          console.log(`Found ${allDocs.length} document chunks for user (${priorityDocs?.length || 0} priority docs)`);
+          
+          // 우선순위 문서는 특별 표시와 함께 컨텍스트 구성
+          let priorityContext = '';
+          let regularContext = '';
+          
+          allDocs.forEach(doc => {
+            const formattedContent = `[${doc.doc_title}] ${doc.content}`;
+            
+            if (doc.content.includes('[별표]') || doc.content.includes('[중요표]') || doc.content.includes('[우선순위]')) {
+              priorityContext += `**[핵심규정]** ${formattedContent}\n\n`;
+            } else {
+              regularContext += `${formattedContent}\n\n`;
+            }
+          });
+          
+          documentContext = priorityContext + regularContext;
         } else {
           console.log('No documents found for user');
         }

@@ -51,17 +51,72 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
   const fileExt = useMemo(() => file?.name.split(".").pop()?.toLowerCase() || "", [file]);
 
+  const enhanceTableStructure = (text: string): string => {
+    // 표 구조를 개선하여 더 명확하게 만들기
+    let enhanced = text;
+    
+    // 연속된 공백을 줄여서 표 구조 개선
+    enhanced = enhanced.replace(/\s{3,}/g, ' | ');
+    
+    // 숫자와 단위가 붙어있는 경우 공백 추가
+    enhanced = enhanced.replace(/(\d+)(원|%|명|일|시간|분|년|월|개|건)/g, '$1$2');
+    
+    // 표 헤더 같은 패턴 감지 및 개선
+    enhanced = enhanced.replace(/([가-힣]+)\s*([가-힣]+)\s*([가-힣]+)\s*([가-힣]+)/g, '$1 | $2 | $3 | $4');
+    
+    return enhanced;
+  };
+
+  const extractSpecialTables = (text: string): { tables: string[], cleanedText: string } => {
+    const tablePattern = /(\[별표\s*\d*\].*?)(?=\[별표\s*\d*\]|$)/gs;
+    const tables: string[] = [];
+    let match;
+    
+    while ((match = tablePattern.exec(text)) !== null) {
+      let tableContent = match[1].trim();
+      // 표 내용 구조화
+      tableContent = enhanceTableStructure(tableContent);
+      
+      // 표 내용이 충분히 길면 독립적으로 처리
+      if (tableContent.length > 100) {
+        tables.push(`**[중요표]** ${tableContent}`);
+      }
+    }
+    
+    return { tables, cleanedText: text };
+  };
+
   const chunkText = (text: string, size = 500, overlap = 50): ChunkItem[] => {
-    const cleaned = text.replace(/\s+/g, " ").trim();
+    // 먼저 "[별표]" 표들을 추출
+    const { tables, cleanedText } = extractSpecialTables(text);
+    
+    const cleaned = cleanedText.replace(/\s+/g, " ").trim();
     const chunks: ChunkItem[] = [];
-    let i = 0;
     let index = 0;
+    
+    // 1. 먼저 "[별표]" 표들을 우선순위 높게 추가 (더 작은 청크 크기)
+    tables.forEach(table => {
+      const tableChunks = table.match(/.{1,400}/g) || [table];
+      tableChunks.forEach(chunk => {
+        chunks.push({ content: chunk.trim(), chunk_index: index++ });
+      });
+    });
+    
+    // 2. 일반 텍스트 청킹
+    let i = 0;
     while (i < cleaned.length) {
       const end = Math.min(i + size, cleaned.length);
-      const piece = cleaned.slice(i, end);
+      let piece = cleaned.slice(i, end);
+      
+      // 청크에 "[별표]" 내용이 있으면 우선순위 표시 추가
+      if (piece.includes('[별표')) {
+        piece = `**[우선순위]** ${piece}`;
+      }
+      
       chunks.push({ content: piece, chunk_index: index++ });
       i += size - overlap;
     }
+    
     return chunks;
   };
 
@@ -69,19 +124,78 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     const ab = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
     let fullText = "";
+    
     for (let p = 1; p <= pdf.numPages; p++) {
       const page = await pdf.getPage(p);
       const content = await page.getTextContent();
-      const strings = (content.items as any[]).map((item) => item.str).join(" ");
-      fullText += `\n\n[page ${p}]\n` + strings;
+      
+      // 텍스트 아이템들을 위치 정보와 함께 정렬
+      const items = content.items as any[];
+      items.sort((a, b) => {
+        // Y 좌표 기준으로 먼저 정렬 (위에서 아래로)
+        if (Math.abs(a.transform[5] - b.transform[5]) > 5) {
+          return b.transform[5] - a.transform[5];
+        }
+        // 같은 줄이면 X 좌표 기준으로 정렬 (왼쪽에서 오른쪽으로)
+        return a.transform[4] - b.transform[4];
+      });
+      
+      let pageText = "";
+      let currentY = null;
+      
+      for (const item of items) {
+        const y = Math.round(item.transform[5]);
+        const text = item.str;
+        
+        // 새로운 줄인 경우
+        if (currentY !== null && Math.abs(currentY - y) > 5) {
+          pageText += "\n";
+        }
+        
+        // 표 구조를 위한 공백 처리
+        if (text.trim()) {
+          pageText += text + " ";
+        }
+        
+        currentY = y;
+      }
+      
+      // "[별표]" 내용 강화
+      if (pageText.includes('[별표')) {
+        pageText = pageText.replace(/(\[별표[^\]]*\])/g, '\n\n**$1**\n');
+      }
+      
+      fullText += `\n\n[page ${p}]\n` + pageText;
     }
+    
+    // 전체 텍스트에서 표 구조 개선
+    fullText = enhanceTableStructure(fullText);
+    
     return fullText;
   };
 
   const extractFromDOCX = async (file: File): Promise<string> => {
     const ab = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer: ab });
-    return result.value as string;
+    
+    // 표 구조를 유지하면서 텍스트 추출
+    const result = await mammoth.extractRawText({ 
+      arrayBuffer: ab,
+      styleMap: [
+        // 표 구조를 텍스트로 변환할 때 구분자 유지
+        "p[style-name='Table Heading'] => p.table-header:",
+        "p[style-name='Table Text'] => p.table-text:"
+      ]
+    });
+    
+    let text = result.value as string;
+    
+    // "[별표]" 내용 강화
+    text = text.replace(/(\[별표[^\]]*\])/g, '\n\n**$1**\n');
+    
+    // 표 구조 개선
+    text = enhanceTableStructure(text);
+    
+    return text;
   };
 
   const handleUpload = async () => {
