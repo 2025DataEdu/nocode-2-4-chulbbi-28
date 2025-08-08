@@ -304,23 +304,39 @@ function hasImportantKeywords(content: string): boolean {
   return importantKeywords.some(keyword => lowercaseContent.includes(keyword));
 }
 
-// 웹 검색 함수 (OpenAI 웹 검색 사용)
+// 웹 검색 함수 (OpenAI 기반 규정 정보 제공)
 async function performWebSearch(query: string, userType: string): Promise<string> {
-  console.log(`OpenAI 웹 검색 시작: ${query}, 사용자 유형: ${userType}`);
+  console.log(`웹 검색 시작: ${query}, 사용자 유형: ${userType}`);
   
   try {
-    let searchQuery = query;
+    let systemPrompt = '';
+    let searchContext = '';
     
-    // 사용자 유형에 따른 검색 쿼리 조정
+    // 사용자 유형에 따른 검색 컨텍스트 설정
     if (userType === '공무원') {
-      searchQuery = `${query} 여비 site:law.go.kr`;
+      systemPrompt = `당신은 공무원 출장 규정 전문가입니다. 법제처(law.go.kr) 및 공무원 관련 법령을 기반으로 정확한 출장 규정 정보를 제공해주세요.`;
+      searchContext = `공무원 출장 규정 (law.go.kr 기반):
+- 공무원여비규정, 공무원 복무규정 등 관련 법령 참조
+- 국내여비, 국외여비 기준 적용
+- 급별, 지역별 차등 지급 원칙
+- 실비 지급 및 정액 지급 기준`;
     } else if (userType === '공공기관') {
-      searchQuery = `${query} 여비 site:alio.go.kr`;
+      systemPrompt = `당신은 공공기관 출장 규정 전문가입니다. 공공기관 경영정보 공개시스템(alio.go.kr) 및 공공기관 관련 규정을 기반으로 정확한 출장 규정 정보를 제공해주세요.`;
+      searchContext = `공공기관 출장 규정 (alio.go.kr 기반):
+- 공공기관의 운영에 관한 법률 및 각 기관별 내부 규정
+- 기관별 출장여비 지급 기준
+- 임직원 등급별 지급 한도
+- 숙박비, 식비, 교통비 등 세부 기준`;
     } else {
-      searchQuery = `${query} 출장 여비 규정`;
+      systemPrompt = `당신은 일반 기업 출장 규정 전문가입니다. 일반적인 기업 출장 규정과 노동법을 기반으로 합리적인 출장 관련 정보를 제공해주세요.`;
+      searchContext = `일반 기업 출장 규정:
+- 근로기준법상 출장 관련 규정
+- 일반적인 기업 출장비 지급 기준
+- 업계 평균 수준의 출장비 가이드라인
+- 세법상 비과세 한도 기준`;
     }
     
-    console.log(`웹 검색 쿼리: ${searchQuery}`);
+    console.log(`검색 컨텍스트: ${searchContext}`);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -329,49 +345,41 @@ async function performWebSearch(query: string, userType: string): Promise<string
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: `당신은 출장 규정 전문 검색 도우미입니다. 제공된 검색 결과를 바탕으로 정확하고 유용한 정보를 요약해서 제공해주세요. 출처를 명확히 밝혀주세요.`
+            content: `${systemPrompt}
+
+컨텍스트 정보:
+${searchContext}
+
+사용자의 질문에 대해 위 컨텍스트를 기반으로 정확하고 유용한 정보를 제공해주세요. 
+반드시 답변 끝에 "※ 이 정보는 일반적인 ${userType} 규정을 기반으로 한 참고 자료입니다. 정확한 규정은 소속 기관의 내부 규정을 확인하시기 바랍니다."라고 안내해주세요.
+
+답변 형식:
+- 구체적이고 실용적인 정보 제공
+- 금액이나 기준이 있다면 명시
+- 관련 법령이나 규정명 언급
+- **중요한 내용은 볼드로 강조**`
           },
           {
             role: 'user',
-            content: searchQuery
+            content: query
           }
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "web_search",
-              description: "Search the web for information",
-              parameters: {
-                type: "object",
-                properties: {
-                  query: {
-                    type: "string",
-                    description: "The search query"
-                  }
-                },
-                required: ["query"]
-              }
-            }
-          }
-        ],
-        tool_choice: "auto",
         temperature: 0.3,
         max_tokens: 1000,
       }),
     });
 
     if (!response.ok) {
-      console.error(`OpenAI 웹 검색 API 오류: ${response.status}`);
+      console.error(`OpenAI API 오류: ${response.status}`);
       return '웹 검색을 수행할 수 없습니다.';
     }
 
     const data = await response.json();
-    console.log('OpenAI 웹 검색 결과:', JSON.stringify(data, null, 2));
+    console.log('OpenAI 응답 생성 완료');
     
     if (data.choices && data.choices[0] && data.choices[0].message) {
       return data.choices[0].message.content || '검색 결과를 찾을 수 없습니다.';
@@ -379,7 +387,7 @@ async function performWebSearch(query: string, userType: string): Promise<string
 
     return '검색 결과를 처리할 수 없습니다.';
   } catch (error) {
-    console.error('OpenAI 웹 검색 중 오류:', error);
+    console.error('웹 검색 중 오류:', error);
     return '웹 검색 중 오류가 발생했습니다.';
   }
 }
