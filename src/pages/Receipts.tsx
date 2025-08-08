@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Receipt, Upload, Calendar, Search, Plus, FileText, Download, Trash2 } from "lucide-react";
+import { Receipt, Upload, Calendar, Search, Plus, FileText, Download, Trash2, Camera, Scan } from "lucide-react";
 
 interface ReceiptData {
   id: string;
@@ -21,6 +21,9 @@ interface ReceiptData {
   receipt_date: string;
   description?: string;
   file_url?: string;
+  image_path?: string;
+  ocr_text?: string;
+  ocr_confidence?: number;
   created_at: string;
   trips?: {
     destination: string;
@@ -53,6 +56,8 @@ export default function Receipts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [processingOCR, setProcessingOCR] = useState(false);
   const [newReceipt, setNewReceipt] = useState({
     trip_id: '',
     category: '',
@@ -121,6 +126,126 @@ export default function Receipts() {
     }
   };
 
+  const uploadImageToStorage = async (file: File, receiptId: string): Promise<string | null> => {
+    try {
+      const fileName = `${user?.id}/${receiptId}/${Date.now()}_${file.name}`;
+      
+      const { data, error } = await supabase.storage
+        .from('receipts')
+        .upload(fileName, file);
+      
+      if (error) {
+        console.error('Storage upload error:', error);
+        return null;
+      }
+      
+      return fileName;
+    } catch (error) {
+      console.error('Image upload error:', error);
+      return null;
+    }
+  };
+
+  const processImageWithOCR = async (file: File, receiptId: string) => {
+    try {
+      setProcessingOCR(true);
+      
+      // 이미지를 base64로 변환
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      return new Promise((resolve, reject) => {
+        reader.onload = async () => {
+          try {
+            const base64Data = reader.result as string;
+            const base64Image = base64Data.split(',')[1]; // data:image/jpeg;base64, 부분 제거
+            
+            const { data, error } = await supabase.functions.invoke('receipt-ocr', {
+              body: {
+                imageBase64: base64Image,
+                receiptId: receiptId
+              }
+            });
+            
+            if (error) {
+              console.error('OCR processing error:', error);
+              toast({
+                title: "OCR 처리 실패",
+                description: "이미지에서 텍스트를 추출하는 중 오류가 발생했습니다.",
+                variant: "destructive"
+              });
+            } else if (data?.success && data?.ocr_result) {
+              const ocrResult = data.ocr_result;
+              
+              // OCR 결과로 폼 자동 채우기
+              if (ocrResult.date && !newReceipt.receipt_date) {
+                setNewReceipt(prev => ({ ...prev, receipt_date: ocrResult.date }));
+              }
+              if (ocrResult.amount && !newReceipt.amount) {
+                setNewReceipt(prev => ({ ...prev, amount: ocrResult.amount.toString() }));
+              }
+              if (ocrResult.category && !newReceipt.category) {
+                setNewReceipt(prev => ({ ...prev, category: ocrResult.category }));
+              }
+              if (ocrResult.store_name && !newReceipt.description) {
+                setNewReceipt(prev => ({ ...prev, description: ocrResult.store_name }));
+              }
+              
+              toast({
+                title: "OCR 처리 완료",
+                description: "영수증 정보가 자동으로 입력되었습니다. 확인 후 수정해주세요."
+              });
+            }
+            
+            resolve(data);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        
+        reader.onerror = () => {
+          reject(new Error('Failed to read file'));
+        };
+      });
+    } catch (error) {
+      console.error('OCR processing error:', error);
+      toast({
+        title: "OCR 처리 실패",
+        description: "이미지 처리 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingOCR(false);
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // 이미지 파일 검증
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "파일 형식 오류",
+          description: "이미지 파일만 업로드 가능합니다.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // 파일 크기 검증 (10MB 제한)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "파일 크기 초과",
+          description: "10MB 이하의 이미지만 업로드 가능합니다.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      setSelectedImage(file);
+    }
+  };
+
   const handleAddReceipt = async () => {
     if (!user || !newReceipt.trip_id || !newReceipt.category || !newReceipt.amount || !newReceipt.receipt_date) {
       toast({
@@ -133,23 +258,52 @@ export default function Receipts() {
 
     setUploading(true);
     try {
-      const { error } = await supabase
+      // 먼저 영수증 데이터를 삽입
+      const receiptData: any = {
+        trip_id: newReceipt.trip_id,
+        category: newReceipt.category as '교통비' | '숙박비' | '식비' | '기타',
+        amount: Number(newReceipt.amount),
+        receipt_date: newReceipt.receipt_date,
+        description: newReceipt.description || null,
+      };
+
+      if (selectedImage) {
+        receiptData.image_size_bytes = selectedImage.size;
+        receiptData.mime_type = selectedImage.type;
+      }
+
+      const { data: insertedReceipt, error } = await supabase
         .from('receipts')
-        .insert({
-          trip_id: newReceipt.trip_id,
-          category: newReceipt.category as '교통비' | '숙박비' | '식비' | '기타',
-          amount: Number(newReceipt.amount),
-          receipt_date: newReceipt.receipt_date,
-          description: newReceipt.description || null,
-        });
+        .insert(receiptData)
+        .select()
+        .single();
       
       if (error) {
         throw error;
       }
+
+      // 이미지가 있으면 업로드 및 OCR 처리
+      if (selectedImage && insertedReceipt) {
+        // 이미지 스토리지 업로드
+        const imagePath = await uploadImageToStorage(selectedImage, insertedReceipt.id);
+        
+        if (imagePath) {
+          // 이미지 경로 업데이트
+          await supabase
+            .from('receipts')
+            .update({ image_path: imagePath })
+            .eq('id', insertedReceipt.id);
+        }
+
+        // OCR 처리 (백그라운드에서 실행)
+        processImageWithOCR(selectedImage, insertedReceipt.id);
+      }
       
       toast({
         title: "영수증 등록 완료",
-        description: "영수증이 성공적으로 등록되었습니다."
+        description: selectedImage 
+          ? "영수증이 등록되었습니다. OCR 처리가 진행 중입니다." 
+          : "영수증이 성공적으로 등록되었습니다."
       });
       
       setIsAddDialogOpen(false);
@@ -160,6 +314,7 @@ export default function Receipts() {
         receipt_date: '',
         description: '',
       });
+      setSelectedImage(null);
       fetchReceipts();
     } catch (error) {
       console.error('Error adding receipt:', error);
@@ -223,11 +378,74 @@ export default function Receipts() {
                   영수증 등록
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>새 영수증 등록</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
+                  {/* 이미지 업로드 섹션 */}
+                  <div>
+                    <Label>영수증 사진 (선택사항)</Label>
+                    <div className="mt-2">
+                      {selectedImage ? (
+                        <div className="space-y-3">
+                          <div className="relative">
+                            <img
+                              src={URL.createObjectURL(selectedImage)}
+                              alt="선택된 영수증"
+                              className="w-full h-40 object-cover rounded-lg border"
+                            />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={() => setSelectedImage(null)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => processImageWithOCR(selectedImage, '')}
+                              disabled={processingOCR}
+                              className="flex-1"
+                            >
+                              {processingOCR ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                                  OCR 처리중...
+                                </>
+                              ) : (
+                                <>
+                                  <Scan className="h-4 w-4 mr-2" />
+                                  OCR 분석
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="block">
+                          <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors">
+                            <Camera className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground mb-2">사진을 선택하거나 드래그하세요</p>
+                            <p className="text-xs text-muted-foreground">JPG, PNG (최대 10MB)</p>
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageSelect}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
                   <div>
                     <Label htmlFor="trip">출장 선택</Label>
                     <Select value={newReceipt.trip_id} onValueChange={(value) => setNewReceipt(prev => ({ ...prev, trip_id: value }))}>
@@ -289,8 +507,8 @@ export default function Receipts() {
                     />
                   </div>
                   
-                  <Button onClick={handleAddReceipt} disabled={uploading} className="w-full">
-                    {uploading ? '등록 중...' : '등록하기'}
+                  <Button onClick={handleAddReceipt} disabled={uploading || processingOCR} className="w-full">
+                    {uploading ? '등록 중...' : processingOCR ? 'OCR 처리 중...' : '등록하기'}
                   </Button>
                 </div>
               </DialogContent>
@@ -400,11 +618,28 @@ export default function Receipts() {
                         <Badge variant="outline">
                           {categoryLabels[receipt.category] || receipt.category}
                         </Badge>
+                        {receipt.image_path && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Camera className="h-3 w-3 mr-1" />
+                            사진
+                          </Badge>
+                        )}
+                        {receipt.ocr_text && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Scan className="h-3 w-3 mr-1" />
+                            OCR
+                          </Badge>
+                        )}
                         <span className="text-caption text-muted-foreground">
                           {receipt.trips?.destination || '출장지 정보 없음'} • {new Date(receipt.receipt_date).toLocaleDateString('ko-KR')}
                         </span>
                       </div>
                       <p className="font-medium text-foreground">{receipt.description || '설명 없음'}</p>
+                      {receipt.ocr_confidence && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          OCR 신뢰도: {(receipt.ocr_confidence * 100).toFixed(0)}%
+                        </p>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-foreground">{receipt.amount.toLocaleString()}원</p>
