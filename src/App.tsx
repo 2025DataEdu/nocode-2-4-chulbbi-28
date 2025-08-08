@@ -81,6 +81,7 @@ function AppContent() {
             <Route path="/receipts" element={<Receipts />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/trip/:id" element={<TripDetails />} />
+            <Route path="/auth" element={<Navigate to="/" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
