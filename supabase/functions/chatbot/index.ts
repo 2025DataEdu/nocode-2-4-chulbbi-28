@@ -28,10 +28,25 @@ serve(async (req) => {
       });
     }
 
+    const contentType = req.headers.get('content-type') || '';
+    let raw = '';
+    try {
+      raw = await req.text();
+    } catch (_) {
+      // ignore
+    }
+
+    if (!raw || raw.trim() === '') {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     let payload: any = {};
     try {
-      payload = await req.json();
-    } catch {
+      payload = JSON.parse(raw);
+    } catch (_) {
       return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -54,6 +69,7 @@ serve(async (req) => {
       });
     }
 
+    console.log('Content-Type:', contentType);
     console.log('Received message:', message);
     console.log('User ID:', userId);
 
