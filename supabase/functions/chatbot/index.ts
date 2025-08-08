@@ -9,6 +9,7 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 // Supabase 클라이언트 생성
@@ -21,10 +22,36 @@ serve(async (req) => {
   }
 
   try {
-    const { message, context, userId } = await req.json();
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ ok: true, message: 'chatbot function healthy' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    if (!message) {
-      throw new Error('메시지가 필요합니다.');
+    let payload: any = {};
+    try {
+      payload = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { message, context, userId } = payload;
+
+    if (!message || typeof message !== 'string') {
+      return new Response(JSON.stringify({ error: '메시지가 필요합니다.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!openAIApiKey) {
+      return new Response(JSON.stringify({ error: 'OPENAI_API_KEY is not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('Received message:', message);
@@ -78,6 +105,7 @@ serve(async (req) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
+          ...(Array.isArray(context?.previousMessages) ? context.previousMessages.slice(-5) : []),
           { role: 'user', content: message }
         ],
         temperature: 0.7,
