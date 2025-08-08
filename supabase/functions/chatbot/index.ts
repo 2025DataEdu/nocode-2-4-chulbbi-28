@@ -73,61 +73,165 @@ serve(async (req) => {
     console.log('Received message:', message);
     console.log('User ID:', userId);
 
-    // 업로드된 문서 검색 - "[별표]" 우선순위 적용
+    // 업로드된 문서 검색 - 더 정확하고 포괄적인 검색
     let documentContext = '';
     if (userId) {
       try {
-        // 1. 먼저 "[별표]" 관련 중요 문서 청크를 우선 검색
-        const { data: priorityDocs, error: priorityError } = await supabase
-          .from('documents')
-          .select('content, doc_title, chunk_index')
-          .eq('user_id', userId)
-          .or('content.ilike.%[별표]%,content.ilike.%[중요표]%,content.ilike.%[우선순위]%')
-          .limit(5);
-
-        // 2. 일반 문서 청크도 검색
-        const { data: regularDocs, error: regularError } = await supabase
-          .from('documents')
-          .select('content, doc_title, chunk_index')
-          .eq('user_id', userId)
-          .limit(8);
-
-        if (priorityError) {
-          console.error('Priority document search error:', priorityError);
-        }
-        if (regularError) {
-          console.error('Regular document search error:', regularError);
-        }
-
-        // 우선순위 문서를 먼저 배치하고 중복 제거
-        const allDocs = [...(priorityDocs || [])];
-        const priorityDocIds = new Set(priorityDocs?.map(doc => `${doc.doc_title}-${doc.chunk_index}`) || []);
+        // 1. 먼저 메시지와 관련된 키워드로 문서 내용 검색
+        const messageKeywords = extractKeywords(message);
+        console.log('Extracted keywords from message:', messageKeywords);
         
-        (regularDocs || []).forEach(doc => {
-          const docId = `${doc.doc_title}-${doc.chunk_index}`;
-          if (!priorityDocIds.has(docId)) {
-            allDocs.push(doc);
-          }
-        });
-
-        if (allDocs && allDocs.length > 0) {
-          console.log(`Found ${allDocs.length} document chunks for user (${priorityDocs?.length || 0} priority docs)`);
-          
-          // 우선순위 문서는 특별 표시와 함께 컨텍스트 구성
-          let priorityContext = '';
-          let regularContext = '';
-          
-          allDocs.forEach(doc => {
-            const formattedContent = `[${doc.doc_title}] ${doc.content}`;
-            
-            if (doc.content.includes('[별표]') || doc.content.includes('[중요표]') || doc.content.includes('[우선순위]')) {
-              priorityContext += `**[핵심규정]** ${formattedContent}\n\n`;
-            } else {
-              regularContext += `${formattedContent}\n\n`;
-            }
+        // 2. 벡터 검색을 위한 임베딩 생성 (사용 가능한 경우)
+        let vectorSearchDocs = [];
+        try {
+          const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openAIApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'text-embedding-ada-002',
+              input: message
+            }),
           });
           
-          documentContext = priorityContext + regularContext;
+          if (embeddingResponse.ok) {
+            const embeddingData = await embeddingResponse.json();
+            const queryEmbedding = embeddingData.data[0].embedding;
+            
+            // 벡터 유사도 검색 (match_documents 함수 사용)
+            const { data: vectorDocs, error: vectorError } = await supabase
+              .rpc('match_documents', {
+                query_embedding: queryEmbedding,
+                match_count: 10
+              });
+              
+            if (!vectorError && vectorDocs) {
+              vectorSearchDocs = vectorDocs;
+              console.log(`Found ${vectorDocs.length} documents via vector search`);
+            }
+          }
+        } catch (vectorError) {
+          console.log('Vector search not available, using keyword search');
+        }
+        
+        // 3. 키워드 기반 검색 (fallback 또는 추가 검색)
+        let keywordSearchDocs = [];
+        if (messageKeywords.length > 0) {
+          const keywordQuery = messageKeywords.map(keyword => `content.ilike.%${keyword}%`).join(',');
+          
+          const { data: keywordDocs, error: keywordError } = await supabase
+            .from('documents')
+            .select('content, doc_title, chunk_index, document_id')
+            .eq('user_id', userId)
+            .or(keywordQuery)
+            .limit(15);
+            
+          if (!keywordError && keywordDocs) {
+            keywordSearchDocs = keywordDocs;
+            console.log(`Found ${keywordDocs.length} documents via keyword search`);
+          }
+        }
+        
+        // 4. 일반적인 모든 문서 검색 (최종 fallback)
+        const { data: allDocs, error: allDocsError } = await supabase
+          .from('documents')
+          .select('content, doc_title, chunk_index, document_id')
+          .eq('user_id', userId)
+          .limit(20);
+          
+        if (allDocsError) {
+          console.error('All documents search error:', allDocsError);
+        }
+        
+        // 5. 결과 통합 및 중복 제거
+        const combinedDocs = new Map();
+        
+        // 벡터 검색 결과 (가장 높은 우선순위)
+        vectorSearchDocs.forEach(doc => {
+          const key = `${doc.doc_title}-${doc.chunk_index}`;
+          if (!combinedDocs.has(key)) {
+            combinedDocs.set(key, { ...doc, source: 'vector', similarity: doc.similarity || 1 });
+          }
+        });
+        
+        // 키워드 검색 결과
+        keywordSearchDocs.forEach(doc => {
+          const key = `${doc.doc_title}-${doc.chunk_index}`;
+          if (!combinedDocs.has(key)) {
+            combinedDocs.set(key, { ...doc, source: 'keyword', similarity: 0.8 });
+          }
+        });
+        
+        // 전체 문서 검색 결과
+        (allDocs || []).forEach(doc => {
+          const key = `${doc.doc_title}-${doc.chunk_index}`;
+          if (!combinedDocs.has(key)) {
+            combinedDocs.set(key, { ...doc, source: 'general', similarity: 0.5 });
+          }
+        });
+        
+        // 6. 우선순위 정렬 및 컨텍스트 구성
+        const sortedDocs = Array.from(combinedDocs.values())
+          .sort((a, b) => {
+            // 먼저 유사도로 정렬
+            if (b.similarity !== a.similarity) {
+              return b.similarity - a.similarity;
+            }
+            // 그 다음 중요 키워드 포함 여부
+            const aHasImportant = hasImportantKeywords(a.content);
+            const bHasImportant = hasImportantKeywords(b.content);
+            if (aHasImportant !== bHasImportant) {
+              return bHasImportant ? 1 : -1;
+            }
+            return 0;
+          })
+          .slice(0, 12); // 최대 12개 문서
+        
+        if (sortedDocs.length > 0) {
+          console.log(`Found ${sortedDocs.length} document chunks for user`);
+          console.log('Document sources:', sortedDocs.map(d => `${d.source}(${d.similarity?.toFixed(2) || 'N/A'})`).join(', '));
+          
+          // 7. 문서 컨텍스트 구성 - 중요도에 따라 마크업
+          documentContext = sortedDocs.map(doc => {
+            const isImportant = hasImportantKeywords(doc.content);
+            const formattedContent = `[${doc.doc_title}${doc.chunk_index ? ` - 섹션 ${doc.chunk_index}` : ''}] ${doc.content}`;
+            
+            if (isImportant) {
+              return `**[핵심규정]** ${formattedContent}`;
+            } else {
+              return formattedContent;
+            }
+          }).join('\n\n');
+          
+          // 8. 특별히 숙박비/여비 관련 질문에 대한 추가 검색
+          if (message.includes('숙박비') || message.includes('한도') || message.includes('여비') || message.includes('지급')) {
+            const specificQuery = [
+              'content.ilike.%숙박비%',
+              'content.ilike.%여비%',
+              'content.ilike.%한도%',
+              'content.ilike.%지급표%',
+              'content.ilike.%별표%',
+              'content.ilike.%상한액%'
+            ].join(',');
+            
+            const { data: specificDocs, error: specificError } = await supabase
+              .from('documents')
+              .select('content, doc_title, chunk_index')
+              .eq('user_id', userId)
+              .or(specificQuery)
+              .limit(10);
+              
+            if (!specificError && specificDocs && specificDocs.length > 0) {
+              console.log(`Found ${specificDocs.length} additional specific documents`);
+              const specificContext = specificDocs.map(doc => 
+                `**[특별검색]** [${doc.doc_title}] ${doc.content}`
+              ).join('\n\n');
+              
+              documentContext = specificContext + '\n\n' + documentContext;
+            }
+          }
         } else {
           console.log('No documents found for user');
         }
@@ -548,4 +652,37 @@ async function getAccommodationRecommendations(message: string) {
     console.error('Error getting accommodation recommendations:', error);
     return '';
   }
+}
+
+// 메시지에서 키워드 추출 함수
+function extractKeywords(message: string): string[] {
+  // 출장 관련 주요 키워드들
+  const businessTripKeywords = [
+    '숙박비', '여비', '한도', '상한액', '지급표', '별표', '규정', '출장',
+    '일비', '식비', '교통비', '체재비', '관내', '관외', '국내', '국외',
+    '영수증', '정산', '신청', '승인', '기준', '규칙', '제한',
+    '서울', '부산', '대구', '인천', '광주', '대전', '울산', '제주',
+    '1박', '2박', '당일', '숙소', '호텔', '모텔'
+  ];
+  
+  const foundKeywords = businessTripKeywords.filter(keyword => 
+    message.includes(keyword)
+  );
+  
+  // 추가로 숫자와 함께 나오는 패턴들 추출
+  const numberPatterns = message.match(/\d+[,.]?\d*원?/g) || [];
+  const datePatterns = message.match(/\d+월|\d+일|\d+박/g) || [];
+  
+  return [...foundKeywords, ...numberPatterns, ...datePatterns];
+}
+
+// 중요 키워드 포함 여부 확인 함수
+function hasImportantKeywords(content: string): boolean {
+  const importantKeywords = [
+    '별표', '지급표', '상한액', '한도', '규정', '제', '조',
+    '숙박비', '여비', '일비', '식비', '교통비',
+    '서울특별시', '광역시', '100,000', '80,000', '70,000'
+  ];
+  
+  return importantKeywords.some(keyword => content.includes(keyword));
 }
