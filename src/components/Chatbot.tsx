@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MessageSquare, Send, X, Bot, User, RotateCcw, ChevronDown } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
@@ -46,6 +47,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
   ])
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(true)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   
@@ -93,6 +95,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
 
     setMessages(prev => [...prev, userMessage])
     setInputMessage("")
+    setShowSuggestions(false) // 메시지 전송 후 추천 질문 숨기기
     
     // Reset textarea height
     if (inputRef.current) {
@@ -207,6 +210,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       role: 'assistant',
       timestamp: new Date()
     }])
+    setShowSuggestions(true) // 대화 초기화 시 추천 질문 다시 보이기
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -216,6 +220,50 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     const textarea = e.target
     textarea.style.height = 'auto'
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
+  }
+
+  const suggestionQuestions = [
+    {
+      category: "출장 유형",
+      questions: [
+        "혼자 출장이신가요?",
+        "동행자가 있나요?",
+        "회사 공식 출장인가요?"
+      ]
+    },
+    {
+      category: "여가 활동",
+      questions: [
+        "여가시간에는 무얼 하고 싶으신가요?",
+        "맛집 추천을 원하시나요?",
+        "쇼핑몰이나 관광지도 알고 싶으신가요?"
+      ]
+    },
+    {
+      category: "숙박 및 교통",
+      questions: [
+        "호텔 추천이 필요하신가요?",
+        "대중교통 정보가 필요한가요?",
+        "렌터카가 필요하신가요?"
+      ]
+    },
+    {
+      category: "식사 및 모임",
+      questions: [
+        "비즈니스 미팅 장소를 찾고 계신가요?",
+        "현지 맛집을 추천해드릴까요?",
+        "회식 장소가 필요하신가요?"
+      ]
+    }
+  ]
+
+  const handleSuggestionClick = (question: string) => {
+    setInputMessage(question)
+    setShowSuggestions(false)
+    // 자동으로 입력창에 포커스
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
   }
 
   if (!isOpen && position === 'floating') {
@@ -318,6 +366,31 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
           >
             <ChevronDown className="h-4 w-4" />
           </Button>
+        )}
+
+        {/* 추천 질문 섹션 */}
+        {showSuggestions && messages.length === 1 && (
+          <div className="px-4 pb-2">
+            <div className="text-xs text-muted-foreground mb-2">💡 추천 질문</div>
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {suggestionQuestions.map((category, categoryIndex) => (
+                <div key={categoryIndex}>
+                  <div className="text-xs font-medium text-muted-foreground mb-1">{category.category}</div>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {category.questions.map((question, questionIndex) => (
+                      <button
+                        key={questionIndex}
+                        onClick={() => handleSuggestionClick(question)}
+                        className="text-xs bg-muted hover:bg-muted/80 text-foreground px-2 py-1 rounded transition-colors"
+                      >
+                        {question}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         <div className="p-4 border-t border-border flex-shrink-0">
