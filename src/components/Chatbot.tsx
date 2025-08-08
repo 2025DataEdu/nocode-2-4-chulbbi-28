@@ -427,166 +427,309 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
 
   return (
     <div className={position === 'floating' ? 'fixed bottom-4 right-4 z-50' : 'w-full h-full'}>
-      <Card 
-        ref={chatbotRef} 
-        className={cardClassName} 
-        style={cardStyle}
-      >
-        {/* 오른쪽 아래 모서리 리사이즈 핸들 (floating 모드일 때만) */}
-        {position === 'floating' && (
-          <div
-            className={`absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-primary/40 hover:bg-primary/60 transition-colors group rounded-tl-md ${isDragging ? 'bg-primary/80' : ''}`}
-            onMouseDown={handleResizeStart}
-            title="창 크기 조절 (대각선으로 드래그)"
-          >
-            <div className="absolute bottom-0 right-0 w-full h-full flex items-end justify-end p-0.5">
-              <div className="w-2 h-2 border-r-2 border-b-2 border-primary-foreground/60"></div>
-            </div>
-          </div>
-        )}
-        
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-primary text-primary-foreground rounded-t-lg flex-shrink-0">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Bot className="h-4 w-4" />
-            출장비서 출삐
-          </CardTitle>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearChat}
-              className="h-6 w-6 p-0 hover:bg-white/20"
-              title="대화 새로고침"
+      {position === 'floating' ? (
+        <ResizablePanelGroup direction="horizontal" className="min-w-[280px] max-w-[600px] shadow-elegant rounded-lg overflow-hidden">
+          <ResizablePanel defaultSize={100} minSize={30} maxSize={100}>
+            <Card 
+              ref={chatbotRef} 
+              className="w-full h-full shadow-none border-0 rounded-none flex flex-col overflow-hidden"
+              style={{ height: `${chatbotSize.height}px` }}
             >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-            {position === 'floating' && (
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-primary text-primary-foreground flex-shrink-0">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Bot className="h-4 w-4" />
+                  출장비서 출삐
+                </CardTitle>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearChat}
+                    className="h-6 w-6 p-0 hover:bg-white/20"
+                    title="대화 새로고침"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setInternalIsOpen(false)}
+                    className="h-6 w-6 p-0 hover:bg-white/20"
+                    title="닫기"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+
+              <CardContent className="flex-1 flex flex-col p-0 relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                <div 
+                  className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+                  ref={scrollAreaRef}
+                  onScroll={handleScroll}
+                >
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex gap-2 ${
+                        message.role === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      {message.role === 'assistant' && (
+                        <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
+                          <Bot className="h-4 w-4 text-primary-foreground" />
+                        </div>
+                      )}
+                      
+                      <div
+                        className={`max-w-[200px] sm:max-w-[240px] p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${
+                          message.role === 'user'
+                            ? 'bg-gradient-primary text-primary-foreground ml-1 sm:ml-2'
+                            : 'bg-muted text-foreground'
+                        }`}
+                      >
+                        <FormattedMessage content={message.content} />
+                      </div>
+
+                      {message.role === 'user' && (
+                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {isLoading && (
+                    <div className="flex gap-2 justify-start">
+                      <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
+                        <Bot className="h-4 w-4 text-primary-foreground" />
+                      </div>
+                      <div className="bg-muted p-3 rounded-lg text-sm">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"></div>
+                          <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 아래로 스크롤 버튼 */}
+                {showScrollButton && (
+                  <Button
+                    onClick={scrollToBottom}
+                    className="absolute bottom-20 right-6 h-10 w-10 rounded-full bg-gradient-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 z-10"
+                    size="sm"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                )}
+
+                {/* 추천 질문 섹션 */}
+                {showSuggestions && (
+                  <div className="px-4 pb-2">
+                    <div className="text-xs text-muted-foreground mb-2">💡 추천 질문</div>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {suggestionQuestions.map((category, categoryIndex) => (
+                        <div key={categoryIndex}>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">{category.category}</div>
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {category.questions.map((question, questionIndex) => (
+                              <button
+                                key={questionIndex}
+                                onClick={() => handleSuggestionClick(question)}
+                                className="text-xs bg-muted hover:bg-muted/80 text-foreground px-2 py-1 rounded transition-colors"
+                              >
+                                {question}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-4 border-t border-border flex-shrink-0">
+                  <div className="flex gap-2">
+                    <textarea
+                      ref={inputRef}
+                      value={inputMessage}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyPress}
+                      placeholder="메시지를 입력하세요..."
+                      disabled={isLoading}
+                      className="flex-1 min-h-[40px] max-h-[120px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      rows={1}
+                    />
+                    <Button
+                      onClick={sendMessage}
+                      disabled={!inputMessage.trim() || isLoading}
+                      size="sm"
+                      className="bg-gradient-primary hover:shadow-medium transition-smooth"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={0} minSize={0} maxSize={0} className="hidden" />
+        </ResizablePanelGroup>
+      ) : (
+        <Card 
+          ref={chatbotRef} 
+          className={cardClassName} 
+          style={cardStyle}
+        >
+          {/* 사이드바 모드에는 리사이즈 핸들이 없음 */}
+          
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-primary text-primary-foreground rounded-t-lg flex-shrink-0">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Bot className="h-4 w-4" />
+              출장비서 출삐
+            </CardTitle>
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setInternalIsOpen(false)}
+                onClick={handleClearChat}
                 className="h-6 w-6 p-0 hover:bg-white/20"
-                title="닫기"
+                title="대화 새로고침"
               >
-                <X className="h-4 w-4" />
+                <RotateCcw className="h-4 w-4" />
               </Button>
-            )}
-          </div>
-        </CardHeader>
+              {position !== 'sidebar' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setInternalIsOpen(false)}
+                  className="h-6 w-6 p-0 hover:bg-white/20"
+                  title="닫기"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0 relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div 
-          className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
-          ref={scrollAreaRef}
-          onScroll={handleScroll}
-        >
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-2 ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
+          <CardContent className="flex-1 flex flex-col p-0 relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div 
+              className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+              ref={scrollAreaRef}
+              onScroll={handleScroll}
             >
-              {message.role === 'assistant' && (
-                <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                  <Bot className="h-4 w-4 text-primary-foreground" />
-                </div>
-              )}
-              
-              <div
-                className={`max-w-[200px] sm:max-w-[240px] p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${
-                  message.role === 'user'
-                    ? 'bg-gradient-primary text-primary-foreground ml-1 sm:ml-2'
-                    : 'bg-muted text-foreground'
-                }`}
-              >
-                <FormattedMessage content={message.content} />
-              </div>
-
-              {message.role === 'user' && (
-                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                </div>
-              )}
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div className="flex gap-2 justify-start">
-              <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                <Bot className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <div className="bg-muted p-3 rounded-lg text-sm">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"></div>
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 아래로 스크롤 버튼 */}
-        {showScrollButton && (
-          <Button
-            onClick={scrollToBottom}
-            className="absolute bottom-20 right-6 h-10 w-10 rounded-full bg-gradient-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 z-10"
-            size="sm"
-          >
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        )}
-
-        {/* 추천 질문 섹션 */}
-        {showSuggestions && (
-          <div className="px-4 pb-2">
-            <div className="text-xs text-muted-foreground mb-2">💡 추천 질문</div>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {suggestionQuestions.map((category, categoryIndex) => (
-                <div key={categoryIndex}>
-                  <div className="text-xs font-medium text-muted-foreground mb-1">{category.category}</div>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {category.questions.map((question, questionIndex) => (
-                      <button
-                        key={questionIndex}
-                        onClick={() => handleSuggestionClick(question)}
-                        className="text-xs bg-muted hover:bg-muted/80 text-foreground px-2 py-1 rounded transition-colors"
-                      >
-                        {question}
-                      </button>
-                    ))}
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-2 ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
+                      <Bot className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  )}
+                  
+                  <div
+                    className={`max-w-[200px] sm:max-w-[240px] p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${
+                      message.role === 'user'
+                        ? 'bg-gradient-primary text-primary-foreground ml-1 sm:ml-2'
+                        : 'bg-muted text-foreground'
+                    }`}
+                  >
+                    <FormattedMessage content={message.content} />
                   </div>
+
+                  {message.role === 'user' && (
+                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
               ))}
+              
+              {isLoading && (
+                <div className="flex gap-2 justify-start">
+                  <div className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg text-sm">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"></div>
+                      <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
 
-        <div className="p-4 border-t border-border flex-shrink-0">
-          <div className="flex gap-2">
-            <textarea
-              ref={inputRef}
-              value={inputMessage}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyPress}
-              placeholder="메시지를 입력하세요..."
-              disabled={isLoading}
-              className="flex-1 min-h-[40px] max-h-[120px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              rows={1}
-            />
-            <Button
-              onClick={sendMessage}
-              disabled={!inputMessage.trim() || isLoading}
-              size="sm"
-              className="bg-gradient-primary hover:shadow-medium transition-smooth"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-      </Card>
+            {/* 아래로 스크롤 버튼 */}
+            {showScrollButton && (
+              <Button
+                onClick={scrollToBottom}
+                className="absolute bottom-20 right-6 h-10 w-10 rounded-full bg-gradient-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 z-10"
+                size="sm"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            )}
+
+            {/* 추천 질문 섹션 */}
+            {showSuggestions && (
+              <div className="px-4 pb-2">
+                <div className="text-xs text-muted-foreground mb-2">💡 추천 질문</div>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {suggestionQuestions.map((category, categoryIndex) => (
+                    <div key={categoryIndex}>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">{category.category}</div>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {category.questions.map((question, questionIndex) => (
+                          <button
+                            key={questionIndex}
+                            onClick={() => handleSuggestionClick(question)}
+                            className="text-xs bg-muted hover:bg-muted/80 text-foreground px-2 py-1 rounded transition-colors"
+                          >
+                            {question}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="p-4 border-t border-border flex-shrink-0">
+              <div className="flex gap-2">
+                <textarea
+                  ref={inputRef}
+                  value={inputMessage}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyPress}
+                  placeholder="메시지를 입력하세요..."
+                  disabled={isLoading}
+                  className="flex-1 min-h-[40px] max-h-[120px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  rows={1}
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() || isLoading}
+                  size="sm"
+                  className="bg-gradient-primary hover:shadow-medium transition-smooth"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
