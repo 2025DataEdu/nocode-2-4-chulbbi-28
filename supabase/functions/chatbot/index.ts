@@ -73,10 +73,36 @@ serve(async (req) => {
     console.log('Received message:', message);
     console.log('User ID:', userId);
 
+    // 업로드된 문서 검색
+    let documentContext = '';
+    if (userId) {
+      try {
+        // 사용자 질문과 관련된 문서 청크 검색
+        const { data: documents, error: searchError } = await supabase
+          .from('documents')
+          .select('content, doc_title, chunk_index')
+          .eq('user_id', userId)
+          .limit(10);
+
+        if (searchError) {
+          console.error('Document search error:', searchError);
+        } else if (documents && documents.length > 0) {
+          console.log(`Found ${documents.length} document chunks for user`);
+          documentContext = documents
+            .map(doc => `[${doc.doc_title}] ${doc.content}`)
+            .join('\n\n');
+        } else {
+          console.log('No documents found for user');
+        }
+      } catch (error) {
+        console.error('Error searching documents:', error);
+      }
+    }
+
     // 출장 등록 요청 감지 및 파싱
     const tripRegistrationResult = await detectAndParseTripRequest(message);
     
-    const systemPrompt = `당신은 '출장비서 출삐'라는 AI 출장 관리 서비스의 전문 도우미입니다.
+    let systemPrompt = `당신은 '출장비서 출삐'라는 AI 출장 관리 서비스의 전문 도우미입니다.
 
 주요 역할:
 1. 출장 계획 및 준비 도움
@@ -115,6 +141,18 @@ serve(async (req) => {
 - 출장지 주변 맛집, 숙소, 볼거리 추천
 
 항상 도움이 되는 정보를 제공하고, 모르는 것은 솔직히 말씀해주세요.`;
+
+    // 업로드된 문서가 있으면 시스템 프롬프트에 추가
+    if (documentContext) {
+      systemPrompt += `
+
+참고 자료:
+사용자가 업로드한 여비 규정 및 관련 문서입니다. 여비 관련 질문에 답할 때 이 정보를 우선적으로 참고하여 정확한 답변을 제공해주세요:
+
+${documentContext}
+
+위 참고 자료를 바탕으로 정확하고 구체적인 답변을 제공해주세요. 참고 자료에 답이 있으면 해당 내용을 인용하여 설명하고, 참고 자료에 없는 내용은 일반적인 지식을 바탕으로 답변해주세요.`;
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

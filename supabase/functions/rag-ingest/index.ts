@@ -51,9 +51,18 @@ serve(async (req) => {
         if (authHeader) {
           try {
             const token = authHeader.replace('Bearer ', '');
-            // JWT 토큰에서 사용자 ID 추출 (간단한 방법)
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            targetUserId = payload.sub;
+            // JWT 토큰을 base64 디코딩할 때 패딩 문제 해결
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              let payload = parts[1];
+              // base64 패딩 추가
+              while (payload.length % 4) {
+                payload += '=';
+              }
+              const decoded = JSON.parse(atob(payload));
+              targetUserId = decoded.sub;
+              console.log('Successfully extracted user ID:', targetUserId);
+            }
           } catch (e) {
             console.error('Failed to extract user ID from token:', e);
           }
