@@ -2,3 +2,6 @@ project_id = "chivhuthfgvndlcfepdl"
 
 [functions.chatbot]
 verify_jwt = false
+
+[functions.rag-ingest]
+verify_jwt = false
