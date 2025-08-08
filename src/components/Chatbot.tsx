@@ -29,18 +29,15 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: `안녕하세요! 출장비서 출삐입니다! 🎯
+      content: `안녕하세요! 출장비서 출삐예요! 🎯✨
 
-📋 **출삐 사용 가이드**
-출장 등록을 간편하게 할 수 있어요!
+**출삐 사용 가이드**
 
-💬 **사용 방법:**
-• 목적지: "서울 출장"
-• 일정: "2025년 8월 6일부터 8일까지 매일 9:00~18:00"
+• 목적지와 일정을 함께 말씀해주세요
+• 예시: "서울 출장, 8월 6일~8일 매일 9시~6시"
+• 출장 규정 확인 후 자동 등록해드려요!
 
-이렇게 알려주시면 출장 규정을 확인해서 새 출장으로 등록해드릴게요! 
-
-출장 관련 궁금한 것이 있으시면 언제든 물어보세요! 😊`,
+궁금한 점은 언제든 물어보세요! 😊`,
       role: 'assistant',
       timestamp: new Date()
     }
@@ -195,18 +192,15 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
   const handleClearChat = () => {
     setMessages([{
       id: '1',
-      content: `안녕하세요! 출장비서 출삐입니다! 🎯
+      content: `안녕하세요! 출장비서 출삐예요! 🎯✨
 
-📋 **출삐 사용 가이드**
-출장 등록을 간편하게 할 수 있어요!
+**출삐 사용 가이드**
 
-💬 **사용 방법:**
-• 목적지: "서울 출장"
-• 일정: "2025년 8월 6일부터 8일까지 매일 9:00~18:00"
+• 목적지와 일정을 함께 말씀해주세요
+• 예시: "서울 출장, 8월 6일~8일 매일 9시~6시"
+• 출장 규정 확인 후 자동 등록해드려요!
 
-이렇게 알려주시면 출장 규정을 확인해서 새 출장으로 등록해드릴게요! 
-
-출장 관련 궁금한 것이 있으시면 언제든 물어보세요! 😊`,
+궁금한 점은 언제든 물어보세요! 😊`,
       role: 'assistant',
       timestamp: new Date()
     }])
