@@ -14,6 +14,11 @@ export interface DistanceResult {
   distance: string;
   duration: string;
   type: 'internal' | 'external';
+  recommendation?: {
+    primary: string;
+    alternatives: string[];
+    reason: string;
+  };
 }
 
 /**
@@ -229,15 +234,110 @@ export function normalizeRegion(destination: string): string {
  */
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (v: number) => (v * Math.PI) / 180;
-  const R = 6371; // km
+  const R = 6371; // 지구 반지름(km)
+  
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
+  
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  const distance = R * c;
+  
+  // 소수점 첫째 자리까지 반환
+  return Math.round(distance * 10) / 10;
+}
+
+/**
+ * 거리 기반 교통수단 추천
+ */
+function recommendTransportation(distanceKm: number): {
+  primary: string;
+  alternatives: string[];
+  reason: string;
+} {
+  if (distanceKm <= 5) {
+    return {
+      primary: '도보/대중교통',
+      alternatives: ['지하철', '버스', '택시'],
+      reason: '근거리 이동으로 대중교통이나 도보 이용 권장'
+    };
+  } else if (distanceKm <= 50) {
+    return {
+      primary: '대중교통/자차',
+      alternatives: ['지하철', '버스', '자차', '택시'],
+      reason: '시내 이동으로 대중교통 또는 자차 이용 적합'
+    };
+  } else if (distanceKm <= 200) {
+    return {
+      primary: '고속버스/KTX',
+      alternatives: ['KTX', '고속버스', '자차', '일반열차'],
+      reason: '중거리 이동으로 KTX나 고속버스 이용 권장'
+    };
+  } else if (distanceKm <= 500) {
+    return {
+      primary: 'KTX/항공',
+      alternatives: ['KTX', '항공', '고속버스'],
+      reason: '장거리 이동으로 KTX나 항공편 이용 권장'
+    };
+  } else {
+    return {
+      primary: '항공',
+      alternatives: ['항공', 'KTX'],
+      reason: '초장거리 이동으로 항공편 이용 강력 권장'
+    };
+  }
+}
+
+/**
+ * 예상 소요시간 계산
+ */
+function calculateEstimatedTime(distanceKm: number, transport?: string): string {
+  let speedKmh: number;
+  
+  switch (transport) {
+    case 'airplane':
+    case '항공':
+      speedKmh = 700; // 공항 이동 시간 포함하여 실제보다 낮게 설정
+      break;
+    case 'train':
+    case 'KTX':
+      speedKmh = 300;
+      break;
+    case 'subway':
+    case '지하철':
+      speedKmh = 40;
+      break;
+    case 'bus':
+    case '버스':
+    case '고속버스':
+      speedKmh = 70;
+      break;
+    case 'official_car':
+    case 'taxi':
+    case 'personal_car':
+    case '자차':
+      speedKmh = 80;
+      break;
+    default:
+      // 거리 기반 기본 속도
+      if (distanceKm <= 50) speedKmh = 40;
+      else if (distanceKm <= 200) speedKmh = 80;
+      else speedKmh = 120;
+  }
+  
+  const hoursFloat = distanceKm / speedKmh;
+  const hours = Math.floor(hoursFloat);
+  const minutes = Math.round((hoursFloat - hours) * 60);
+  
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}시간 ${minutes}분` : `${hours}시간`;
+  } else {
+    return `${Math.max(1, minutes)}분`;
+  }
 }
 
 /**
@@ -248,33 +348,45 @@ export async function calculateDistanceByAddress(
   destinationAddress: string
 ): Promise<DistanceResult | null> {
   try {
+    console.log(`출발지 주소 좌표 변환: ${departureAddress}`);
+    console.log(`도착지 주소 좌표 변환: ${destinationAddress}`);
+    
     const dep = await GeocodingService.geocode(departureAddress);
     const dest = await GeocodingService.geocode(destinationAddress);
 
-    if (!dep || !dest) return null;
+    if (!dep || !dest) {
+      console.error('좌표 변환 실패:', { dep, dest });
+      return null;
+    }
 
-    const distanceKm = Math.round(haversineDistance(dep.lat, dep.lng, dest.lat, dest.lng));
+    console.log(`출발지 좌표: ${dep.lat}, ${dep.lng}`);
+    console.log(`도착지 좌표: ${dest.lat}, ${dest.lng}`);
 
-    // 평균 속도 80km/h 기준 시간 계산
-    const hoursFloat = distanceKm / 80;
-    const hours = Math.floor(hoursFloat);
-    const minutes = Math.round((hoursFloat - hours) * 60);
-    const durationText = hours > 0
-      ? `${hours}시간${minutes > 0 ? ` ${minutes}분` : ''}`
-      : `${Math.max(1, Math.round(hoursFloat * 60))}분`;
+    // 하버사인 공식으로 직선거리 계산 (소수점 첫째 자리)
+    const distanceKm = haversineDistance(dep.lat, dep.lng, dest.lat, dest.lng);
+    console.log(`계산된 직선거리: ${distanceKm}km`);
 
-    // 지역 기반 구분 (기본 로직 유지)
+    // 교통수단 추천
+    const recommendation = recommendTransportation(distanceKm);
+    
+    // 예상 소요시간 계산
+    const estimatedTime = calculateEstimatedTime(distanceKm);
+
+    // 지역 기반 출장 구분
     const depRegion = normalizeRegion(departureAddress);
     const destRegion = normalizeRegion(destinationAddress);
     const type: 'internal' | 'external' = depRegion === destRegion ? 'internal' : 'external';
 
+    console.log(`출장 구분: ${type}, 추천 교통수단: ${recommendation.primary}`);
+
     return {
       distance: `${distanceKm}km`,
-      duration: durationText,
+      duration: estimatedTime,
       type,
+      recommendation
     };
-  } catch (e) {
-    console.error('calculateDistanceByAddress error:', e);
+  } catch (error) {
+    console.error('주소 기반 거리 계산 오류:', error);
     return null;
   }
 }

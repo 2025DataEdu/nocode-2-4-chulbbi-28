@@ -66,115 +66,63 @@ export default function Register() {
     { id: 4, title: '확인', emoji: '✅' }
   ]
 
-  const [travelInfo, setTravelInfo] = useState<ReturnType<typeof calculateDistanceUtil>>(null)
-  const [travelEstimation, setTravelEstimation] = useState<{
-    straightLineKm: number;
-    estimatedTravelKm: number;
-    estimatedHours: number;
-    recommendedTransport: string;
-    tips: string[];
-    depLabel: string;
-    destLabel: string;
-    isDomestic: boolean;
+  const [travelInfo, setTravelInfo] = useState<Awaited<ReturnType<typeof calculateDistanceByAddress>>>(null)
+  const [addressCalculation, setAddressCalculation] = useState<{
+    distanceKm: number;
+    estimatedTime: string;
+    recommendation: {
+      primary: string;
+      alternatives: string[];
+      reason: string;
+    };
+    type: 'internal' | 'external';
   } | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    const run = async () => {
+    
+    const calculateAddressDistance = async () => {
       if (!formData.departure || !formData.destination) {
         if (!cancelled) {
           setTravelInfo(null)
-          setTravelEstimation(null)
+          setAddressCalculation(null)
         }
         return
       }
 
-      const depLabel = formData.departure
-      const destLabel = formData.destination
-
-      // 1) 프리셋 및 주소 기반 모두 계산 (주소 기반이 있으면 우선 사용)
-      const preset = calculateDistanceUtil(formData.departure, formData.destination)
-      const byAddress = await calculateDistanceByAddress(depLabel, destLabel)
-      const chosen = byAddress || preset
-      if (!cancelled) setTravelInfo(chosen)
-
-      // 2) 직선 거리(km)
-      const straightLineKm = byAddress
-        ? extractDistanceKm(byAddress.distance)
-        : (preset ? extractDistanceKm(preset.distance) : 0)
-
-      if (straightLineKm <= 0) {
-        if (!cancelled) setTravelEstimation(null)
-        return
-      }
-
-      // 국내/국제 판별(간단 휴리스틱)
-      const domesticRegex = /(한국|대한민국|서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/
-      const isDomestic = domesticRegex.test(depLabel + destLabel)
-
-      // 3) 예상 이동 거리(km): 국내 1.25배, 국제 1.10배 (구글/공공데이터 일반적 경로 가중치 가정)
-      const factor = isDomestic ? 1.25 : 1.1
-      const estimatedTravelKm = Math.max(straightLineKm, Math.round(straightLineKm * factor))
-
-      // 4) 거리 기반 추천 교통수단
-      const recommend = (dist: number) => {
-        if (dist < 200) return { text: '자동차 / 고속버스 / KTX·ITX', primary: 'car' as const }
-        if (dist < 500) return { text: 'KTX·ITX / 항공', primary: 'ktx' as const }
-        return { text: '항공', primary: 'airplane' as const }
-      }
-      const rec = recommend(estimatedTravelKm)
-
-      const getSpeed = (transport: string | undefined, primary: 'car' | 'ktx' | 'airplane') => {
-        switch (transport) {
-          case 'airplane':
-            return 700
-          case 'train':
-            return 300
-          case 'subway':
-            return 60
-          case 'official_car':
-          case 'taxi':
-          case 'personal_car':
-            return 80
-          case 'other':
-            return 80
-          default:
-            return primary === 'airplane' ? 700 : primary === 'ktx' ? 300 : 80
+      console.log(`거리 계산 시작: ${formData.departure} → ${formData.destination}`)
+      
+      try {
+        // 주소 기반 거리 계산
+        const result = await calculateDistanceByAddress(formData.departure, formData.destination)
+        
+        if (!cancelled) {
+          setTravelInfo(result)
+          
+          if (result && result.recommendation) {
+            const distanceKm = extractDistanceKm(result.distance)
+            setAddressCalculation({
+              distanceKm,
+              estimatedTime: result.duration,
+              recommendation: result.recommendation,
+              type: result.type
+            })
+          } else {
+            setAddressCalculation(null)
+          }
         }
-      }
-
-      const speed = getSpeed(formData.transport, rec.primary)
-      const estimatedHours = Math.max(0.1, Number((estimatedTravelKm / speed).toFixed(1)))
-
-      // 5) 부가 팁 1~2줄
-      const tips: string[] = []
-      if (rec.primary === 'airplane' || estimatedTravelKm >= 500) {
-        tips.push('항공 이용 시 기상 영향과 공항 이동/보안검색 시간을 고려해 여유 있게 출발하세요.')
-        tips.push('예산 절감을 위해 LCC/얼리버드 특가 또는 KTX 특가를 확인해보세요.')
-      } else if (rec.primary === 'ktx') {
-        tips.push('KTX/ITX는 출발 2~3일 전 예매 시 좌석 선택이 수월합니다.')
-        tips.push('우천/폭설 시 지연 가능성을 고려해 일정에 여유를 두세요.')
-      } else {
-        tips.push('출퇴근 시간대(07~09시, 17~20시) 교통 혼잡을 피하면 이동 시간이 단축됩니다.')
-        tips.push('톨비·주차비를 예산에 반영하세요.')
-      }
-
-      if (!cancelled) {
-        setTravelEstimation({
-          straightLineKm,
-          estimatedTravelKm,
-          estimatedHours,
-          recommendedTransport: rec.text,
-          tips,
-          depLabel,
-          destLabel,
-          isDomestic
-        })
+      } catch (error) {
+        console.error('주소 기반 거리 계산 실패:', error)
+        if (!cancelled) {
+          setTravelInfo(null)
+          setAddressCalculation(null)
+        }
       }
     }
-    run()
+
+    calculateAddressDistance()
     return () => { cancelled = true }
-  }, [formData.departure, formData.destination, formData.transport])
+  }, [formData.departure, formData.destination])
 
   const handleNext = () => {
     if (currentStep === 1) {
@@ -361,13 +309,26 @@ export default function Register() {
               {travelInfo && (
                 <Card className="bg-accent/10 border-accent/20">
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-3 text-sm">
-                      <Car className="w-4 h-4 text-accent" />
-                      <div>
-                        <p><strong>예상 거리:</strong> {travelInfo.distance}</p>
-                        <p><strong>예상 시간:</strong> {travelInfo.duration}</p>
-                        <p><strong>출장 구분:</strong> {travelInfo.type === 'internal' ? '관내 출장' : '관외 출장'}</p>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center gap-3">
+                        <Car className="w-4 h-4 text-accent" />
+                        <div className="space-y-1">
+                          <p><strong>직선거리:</strong> {travelInfo.distance}</p>
+                          <p><strong>예상시간:</strong> {travelInfo.duration}</p>
+                          <p><strong>출장구분:</strong> {travelInfo.type === 'internal' ? '관내 출장' : '관외 출장'}</p>
+                        </div>
                       </div>
+                      
+                      {addressCalculation?.recommendation && (
+                        <div className="border-t pt-3">
+                          <p className="font-medium text-accent mb-1">🚗 추천 교통수단</p>
+                          <p><strong>주 교통수단:</strong> {addressCalculation.recommendation.primary}</p>
+                          <p><strong>대안:</strong> {addressCalculation.recommendation.alternatives.join(', ')}</p>
+                          <p className="text-muted-foreground text-xs mt-1">
+                            {addressCalculation.recommendation.reason}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -455,31 +416,26 @@ export default function Register() {
               {travelInfo && (
                 <Card className="bg-accent/10 border-accent/20">
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-3 text-sm">
-                      <Car className="w-4 h-4 text-accent" />
-                      <div>
-                        <p><strong>예상 거리:</strong> {travelInfo.distance}</p>
-                        <p><strong>예상 시간:</strong> {travelInfo.duration}</p>
-                        <p><strong>출장 구분:</strong> {travelInfo.type === 'internal' ? '관내 출장' : '관외 출장'}</p>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center gap-3">
+                        <Car className="w-4 h-4 text-accent" />
+                        <div className="space-y-1">
+                          <p><strong>직선거리:</strong> {travelInfo.distance}</p>
+                          <p><strong>예상시간:</strong> {travelInfo.duration}</p>
+                          <p><strong>출장구분:</strong> {travelInfo.type === 'internal' ? '관내 출장' : '관외 출장'}</p>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {travelEstimation && (
-                <Card className="border-primary/20">
-                  <CardContent className="p-4">
-                    <div className="text-sm whitespace-pre-line">
-                      <p className="font-semibold">[{travelEstimation.depLabel}] → [{travelEstimation.destLabel}]</p>
-                      <p>거리: {travelEstimation.straightLineKm} km (직선) / {travelEstimation.estimatedTravelKm} km (예상)</p>
-                      <p>예상 소요 시간: {travelEstimation.estimatedHours} 시간</p>
-                      <p>추천 교통수단: {travelEstimation.recommendedTransport}</p>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-3 space-y-1">
-                      {travelEstimation.tips.map((tip, idx) => (
-                        <p key={idx}>• {tip}</p>
-                      ))}
+                      
+                      {addressCalculation?.recommendation && (
+                        <div className="border-t pt-3">
+                          <p className="font-medium text-accent mb-1">🚗 추천 교통수단</p>
+                          <p><strong>주 교통수단:</strong> {addressCalculation.recommendation.primary}</p>
+                          <p><strong>대안:</strong> {addressCalculation.recommendation.alternatives.join(', ')}</p>
+                          <p className="text-muted-foreground text-xs mt-1">
+                            {addressCalculation.recommendation.reason}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
