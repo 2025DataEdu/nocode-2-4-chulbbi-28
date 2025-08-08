@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Star, MapPin, Car, Coffee, UtensilsCrossed, Camera, Wifi, Users, Clock, Heart } from 'lucide-react'
 
 interface RecommendationItem {
@@ -314,18 +315,6 @@ export function DetailedRecommendations({ destination }: DetailedRecommendations
     }
   ]
 
-  const getFeatureIcon = (feature: string) => {
-    switch (feature) {
-      case 'parking': return <Car className="w-4 h-4" />
-      case 'wifi': return <Wifi className="w-4 h-4" />
-      case 'solo': return <Users className="w-4 h-4" />
-      case 'work': return <Coffee className="w-4 h-4" />
-      case 'family': return <Heart className="w-4 h-4" />
-      case 'quiet': return <Clock className="w-4 h-4" />
-      default: return null
-    }
-  }
-
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'restaurant': return <UtensilsCrossed className="w-5 h-5 text-orange-600" />
@@ -389,8 +378,94 @@ export function DetailedRecommendations({ destination }: DetailedRecommendations
   const cafes = recommendations.filter(item => item.type === 'cafe')
   const attractions = recommendations.filter(item => item.type === 'attraction')
 
+  const renderRecommendationCard = (item: RecommendationItem) => (
+    <div key={item.id} className="border border-border rounded-lg p-4 hover:shadow-sm transition-shadow">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            {getTypeIcon(item.type)}
+            <h3 className="font-semibold text-foreground">{item.name}</h3>
+            <Badge variant="secondary" className={getTypeColor(item.type)}>
+              {getTypeLabel(item.type)}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex">{renderStars(item.rating)}</div>
+            <span className="text-sm font-medium">{item.rating}</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {item.address}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4 mb-3">
+        <div className="space-y-2">
+          {renderFeatureRating('맛', item.features.taste)}
+          {renderFeatureRating('분위기', item.features.atmosphere)}
+          {renderFeatureRating('조용함', item.features.quietness)}
+        </div>
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1">
+            {item.features.parking && (
+              <Badge variant="outline" className="text-xs">
+                <Car className="w-3 h-3 mr-1" />주차
+              </Badge>
+            )}
+            {item.features.soloFriendly && (
+              <Badge variant="outline" className="text-xs">혼밥OK</Badge>
+            )}
+            {item.features.familyFriendly && (
+              <Badge variant="outline" className="text-xs">가족OK</Badge>
+            )}
+            {item.features.workFriendly && (
+              <Badge variant="outline" className="text-xs">
+                <Coffee className="w-3 h-3 mr-1" />노트북OK
+              </Badge>
+            )}
+            {item.features.wifi && (
+              <Badge variant="outline" className="text-xs">
+                <Wifi className="w-3 h-3 mr-1" />WiFi
+              </Badge>
+            )}
+            <Badge variant="outline" className="text-xs">
+              {item.features.price === 'low' ? '저렴' : 
+               item.features.price === 'medium' ? '보통' : '비쌈'}
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4 mb-3">
+        <div>
+          <h4 className="text-sm font-medium text-green-700 mb-1">👍 장점</h4>
+          <ul className="text-xs text-muted-foreground space-y-1">
+            {item.pros.map((pro, index) => (
+              <li key={index}>• {pro}</li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h4 className="text-sm font-medium text-red-700 mb-1">👎 단점</h4>
+          <ul className="text-xs text-muted-foreground space-y-1">
+            {item.cons.map((con, index) => (
+              <li key={index}>• {con}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="bg-accent/10 border border-accent/20 rounded-md p-3">
+        <h4 className="text-sm font-medium text-foreground mb-1">💬 블로거 한줄평</h4>
+        <p className="text-sm text-muted-foreground">{item.reviewSummary}</p>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-foreground mb-2">
           {destination} 블로거 추천 BEST
@@ -400,270 +475,70 @@ export function DetailedRecommendations({ destination }: DetailedRecommendations
         </p>
       </div>
 
-      {/* 맛집 섹션 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UtensilsCrossed className="w-5 h-5 text-orange-600" />
+      <Tabs defaultValue="restaurants" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="restaurants" className="flex items-center gap-2">
+            <UtensilsCrossed className="w-4 h-4" />
             맛집 Top 5
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            {restaurants.map((item) => (
-              <div key={item.id} className="border border-border rounded-lg p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {getTypeIcon(item.type)}
-                      <h3 className="font-semibold text-foreground">{item.name}</h3>
-                      <Badge variant="secondary" className={getTypeColor(item.type)}>
-                        {getTypeLabel(item.type)}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex">{renderStars(item.rating)}</div>
-                      <span className="text-sm font-medium">{item.rating}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {item.address}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4 mb-3">
-                  <div className="space-y-2">
-                    {renderFeatureRating('맛', item.features.taste)}
-                    {renderFeatureRating('분위기', item.features.atmosphere)}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap gap-1">
-                      {item.features.parking && (
-                        <Badge variant="outline" className="text-xs">
-                          <Car className="w-3 h-3 mr-1" />주차
-                        </Badge>
-                      )}
-                      {item.features.soloFriendly && (
-                        <Badge variant="outline" className="text-xs">혼밥OK</Badge>
-                      )}
-                      {item.features.familyFriendly && (
-                        <Badge variant="outline" className="text-xs">가족OK</Badge>
-                      )}
-                      <Badge variant="outline" className="text-xs">
-                        {item.features.price === 'low' ? '저렴' : 
-                         item.features.price === 'medium' ? '보통' : '비쌈'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4 mb-3">
-                  <div>
-                    <h4 className="text-sm font-medium text-green-700 mb-1">👍 장점</h4>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {item.pros.map((pro, index) => (
-                        <li key={index}>• {pro}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-red-700 mb-1">👎 단점</h4>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {item.cons.map((con, index) => (
-                        <li key={index}>• {con}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="bg-muted/50 p-3 rounded-md">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>리뷰 요약:</strong> {item.reviewSummary}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 카페 섹션 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Coffee className="w-5 h-5 text-amber-600" />
+          </TabsTrigger>
+          <TabsTrigger value="cafes" className="flex items-center gap-2">
+            <Coffee className="w-4 h-4" />
             카페 Top 5
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            {cafes.map((item) => (
-              <div key={item.id} className="border border-border rounded-lg p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {getTypeIcon(item.type)}
-                      <h3 className="font-semibold text-foreground">{item.name}</h3>
-                      <Badge variant="secondary" className={getTypeColor(item.type)}>
-                        {getTypeLabel(item.type)}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex">{renderStars(item.rating)}</div>
-                      <span className="text-sm font-medium">{item.rating}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {item.address}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4 mb-3">
-                  <div className="space-y-2">
-                    {renderFeatureRating('분위기', item.features.atmosphere)}
-                    {renderFeatureRating('조용함', item.features.quietness)}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap gap-1">
-                      {item.features.parking && (
-                        <Badge variant="outline" className="text-xs">
-                          <Car className="w-3 h-3 mr-1" />주차
-                        </Badge>
-                      )}
-                      {item.features.wifi && (
-                        <Badge variant="outline" className="text-xs">
-                          <Wifi className="w-3 h-3 mr-1" />WiFi
-                        </Badge>
-                      )}
-                      {item.features.workFriendly && (
-                        <Badge variant="outline" className="text-xs">카공OK</Badge>
-                      )}
-                      <Badge variant="outline" className="text-xs">
-                        {item.features.price === 'low' ? '저렴' : 
-                         item.features.price === 'medium' ? '보통' : '비쌈'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4 mb-3">
-                  <div>
-                    <h4 className="text-sm font-medium text-green-700 mb-1">👍 장점</h4>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {item.pros.map((pro, index) => (
-                        <li key={index}>• {pro}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-red-700 mb-1">👎 단점</h4>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {item.cons.map((con, index) => (
-                        <li key={index}>• {con}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="bg-muted/50 p-3 rounded-md">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>리뷰 요약:</strong> {item.reviewSummary}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 관광지 섹션 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Camera className="w-5 h-5 text-purple-600" />
+          </TabsTrigger>
+          <TabsTrigger value="attractions" className="flex items-center gap-2">
+            <Camera className="w-4 h-4" />
             관광지 Top 5
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            {attractions.map((item) => (
-              <div key={item.id} className="border border-border rounded-lg p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {getTypeIcon(item.type)}
-                      <h3 className="font-semibold text-foreground">{item.name}</h3>
-                      <Badge variant="secondary" className={getTypeColor(item.type)}>
-                        {getTypeLabel(item.type)}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex">{renderStars(item.rating)}</div>
-                      <span className="text-sm font-medium">{item.rating}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {item.address}
-                    </p>
-                  </div>
-                </div>
+          </TabsTrigger>
+        </TabsList>
 
-                <div className="grid md:grid-cols-2 gap-4 mb-3">
-                  <div className="space-y-2">
-                    {renderFeatureRating('분위기', item.features.atmosphere)}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap gap-1">
-                      {item.features.parking && (
-                        <Badge variant="outline" className="text-xs">
-                          <Car className="w-3 h-3 mr-1" />주차
-                        </Badge>
-                      )}
-                      {item.features.familyFriendly && (
-                        <Badge variant="outline" className="text-xs">가족OK</Badge>
-                      )}
-                      <Badge variant="outline" className="text-xs">
-                        {item.features.price === 'low' ? '저렴' : 
-                         item.features.price === 'medium' ? '보통' : '비쌈'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4 mb-3">
-                  <div>
-                    <h4 className="text-sm font-medium text-green-700 mb-1">👍 장점</h4>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {item.pros.map((pro, index) => (
-                        <li key={index}>• {pro}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-red-700 mb-1">👎 단점</h4>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {item.cons.map((con, index) => (
-                        <li key={index}>• {con}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="bg-muted/50 p-3 rounded-md">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>리뷰 요약:</strong> {item.reviewSummary}
-                  </p>
-                </div>
+        <TabsContent value="restaurants" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UtensilsCrossed className="w-5 h-5 text-orange-600" />
+                맛집 Top 5
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {restaurants.map(renderRecommendationCard)}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cafes" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Coffee className="w-5 h-5 text-amber-600" />
+                카페 Top 5
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {cafes.map(renderRecommendationCard)}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="attractions" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-purple-600" />
+                관광지 Top 5
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {attractions.map(renderRecommendationCard)}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
