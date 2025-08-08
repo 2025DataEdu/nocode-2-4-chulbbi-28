@@ -3,7 +3,6 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MapPin } from 'lucide-react'
-import { DetailedRecommendations } from './DetailedRecommendations'
 
 // Leaflet 아이콘 URL 설정
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -135,37 +134,31 @@ export function TripDetailsMap({ destination, latitude, longitude }: TripDetails
   }, [destination, latitude, longitude])
 
   return (
-    <div className="space-y-6">
-      {/* 지도 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="w-5 h-5" />
-            출장지 위치
-          </CardTitle>
-          {currentCoords && (
-            <p className="text-sm text-muted-foreground">
-              {locationInfo || destination} 
-              <span className="ml-2 text-xs">
-                ({currentCoords.lat.toFixed(4)}, {currentCoords.lng.toFixed(4)})
-              </span>
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div 
-            ref={mapRef} 
-            className="w-full h-72 rounded-lg border border-border bg-muted/30" 
-            style={{ minHeight: '300px' }}
-          />
-          <div className="mt-3 text-xs text-muted-foreground text-center">
-            지도를 드래그하여 이동하거나 마우스 휠로 확대/축소할 수 있습니다.
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 상세 추천 정보 */}
-      <DetailedRecommendations destination={destination} />
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="w-5 h-5" />
+          출장지 위치
+        </CardTitle>
+        {currentCoords && (
+          <p className="text-sm text-muted-foreground">
+            {locationInfo || destination} 
+            <span className="ml-2 text-xs">
+              ({currentCoords.lat.toFixed(4)}, {currentCoords.lng.toFixed(4)})
+            </span>
+          </p>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div 
+          ref={mapRef} 
+          className="w-full h-72 rounded-lg border border-border bg-muted/30" 
+          style={{ minHeight: '300px' }}
+        />
+        <div className="mt-3 text-xs text-muted-foreground text-center">
+          지도를 드래그하여 이동하거나 마우스 휠로 확대/축소할 수 있습니다.
+        </div>
+      </CardContent>
+    </Card>
   )
 }
