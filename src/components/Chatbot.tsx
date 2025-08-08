@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MessageSquare, Send, X, Bot, User, RotateCcw, ChevronDown } from "lucide-react"
+import { MessageSquare, Send, X, Bot, User, RotateCcw, ChevronDown, Move } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/useAuth"
@@ -43,8 +43,11 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [chatbotSize, setChatbotSize] = useState({ width: 320, height: 600 })
+  const [isResizing, setIsResizing] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const chatbotRef = useRef<HTMLDivElement>(null)
   
   // 외부에서 제어하는 경우 vs 내부 상태로 제어하는 경우
   const isOpen = position === 'sidebar' ? externalIsOpen : internalIsOpen
@@ -77,6 +80,38 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
       inputRef.current.focus()
     }
   }, [isOpen])
+
+  // 리사이즈 기능
+  const handleResizeStart = (e: React.MouseEvent) => {
+    if (position !== 'floating') return
+    
+    e.preventDefault()
+    setIsResizing(true)
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const startWidth = chatbotSize.width
+    const startHeight = chatbotSize.height
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = startX - e.clientX
+      const deltaY = startY - e.clientY
+      
+      const newWidth = Math.min(Math.max(startWidth + deltaX, 280), window.innerWidth - 50)
+      const newHeight = Math.min(Math.max(startHeight + deltaY, 400), window.innerHeight - 50)
+      
+      setChatbotSize({ width: newWidth, height: newHeight })
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return
@@ -273,10 +308,27 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
 
   const cardClassName = position === 'sidebar' 
     ? "w-full h-full shadow-none border-0 rounded-none flex flex-col overflow-hidden"
-    : "fixed bottom-4 right-4 w-[calc(100vw-2rem)] sm:w-80 h-[500px] sm:h-[600px] max-h-[80vh] shadow-elegant z-50 flex flex-col"
+    : `fixed bottom-4 right-4 shadow-elegant z-50 flex flex-col ${isResizing ? 'select-none' : ''}`
+  
+  const cardStyle = position === 'floating' ? {
+    width: `${chatbotSize.width}px`,
+    height: `${chatbotSize.height}px`,
+    maxHeight: '80vh'
+  } : undefined
 
   return (
-    <Card className={cardClassName}>
+    <Card ref={chatbotRef} className={cardClassName} style={cardStyle}>
+      {/* 리사이즈 핸들 (floating 모드일 때만) */}
+      {position === 'floating' && (
+        <div
+          className="absolute top-0 left-0 w-4 h-4 cursor-nw-resize bg-muted/50 hover:bg-muted border-r border-b border-border z-10 flex items-center justify-center"
+          onMouseDown={handleResizeStart}
+          title="창 크기 조절"
+        >
+          <Move className="h-3 w-3 text-muted-foreground" />
+        </div>
+      )}
+      
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-primary text-primary-foreground rounded-t-lg flex-shrink-0">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Bot className="h-4 w-4" />
