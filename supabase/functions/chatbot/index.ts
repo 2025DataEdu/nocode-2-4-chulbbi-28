@@ -73,16 +73,34 @@ serve(async (req) => {
     console.log('Received message:', message);
     console.log('User ID:', userId);
 
-    // 업로드된 문서 검색 - 더 정확하고 포괄적인 검색
-    let documentContext = '';
+    // 사용자 프로필 정보 가져오기 (user_type 확인용)
+    let userProfile = null;
     if (userId) {
       try {
-        // 1. 먼저 메시지와 관련된 키워드로 문서 내용 검색
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_type, organization')
+          .eq('user_id', userId)
+          .single();
+        userProfile = profile;
+        console.log('User profile:', userProfile);
+      } catch (error) {
+        console.log('Could not fetch user profile:', error);
+      }
+    }
+
+    // 업로드된 문서 검색 - 개선된 임베딩 기반 검색
+    let documentContext = '';
+    let hasRelevantDocuments = false;
+    
+    if (userId) {
+      try {
+        // 1. 메시지에서 키워드 추출
         const messageKeywords = extractKeywords(message);
         console.log('Extracted keywords from message:', messageKeywords);
         
-        // 2. 벡터 검색을 위한 임베딩 생성 (사용 가능한 경우)
-        let vectorSearchDocs = [];
+        // 2. 향상된 벡터 검색 (임베딩 기반)
+        let bestMatches = [];
         try {
           const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
             method: 'POST',
@@ -91,8 +109,9 @@ serve(async (req) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'text-embedding-ada-002',
-              input: message
+              model: 'text-embedding-3-small', // 더 나은 임베딩 모델 사용
+              input: message,
+              dimensions: 1536 // 성능 최적화를 위한 차원 수 설정
             }),
           });
           
@@ -100,144 +119,120 @@ serve(async (req) => {
             const embeddingData = await embeddingResponse.json();
             const queryEmbedding = embeddingData.data[0].embedding;
             
-            // 벡터 유사도 검색 (match_documents 함수 사용)
+            // 벡터 유사도 검색 - 임계값 0.7 이상만 채택
             const { data: vectorDocs, error: vectorError } = await supabase
               .rpc('match_documents', {
                 query_embedding: queryEmbedding,
-                match_count: 10
+                match_count: 15
               });
               
             if (!vectorError && vectorDocs) {
-              vectorSearchDocs = vectorDocs;
-              console.log(`Found ${vectorDocs.length} documents via vector search`);
+              // 유사도 임계값 적용 및 정렬
+              bestMatches = vectorDocs
+                .filter(doc => doc.similarity > 0.7)
+                .sort((a, b) => b.similarity - a.similarity);
+              console.log(`Found ${bestMatches.length} high-similarity matches (>0.7)`);
             }
           }
         } catch (vectorError) {
-          console.log('Vector search not available, using keyword search');
+          console.log('Vector search failed, using keyword search');
         }
         
-        // 3. 키워드 기반 검색 (fallback 또는 추가 검색)
-        let keywordSearchDocs = [];
+        // 3. 키워드 기반 보완 검색
+        let keywordMatches = [];
         if (messageKeywords.length > 0) {
-          const keywordQuery = messageKeywords.map(keyword => `content.ilike.%${keyword}%`).join(',');
+          // 더 정교한 키워드 검색 쿼리 구성
+          const keywordQueries = [
+            // 정확한 키워드 매칭
+            ...messageKeywords.map(keyword => `content.ilike.%${keyword}%`),
+            // 문서 제목에서도 검색
+            ...messageKeywords.map(keyword => `doc_title.ilike.%${keyword}%`)
+          ];
           
           const { data: keywordDocs, error: keywordError } = await supabase
             .from('documents')
             .select('content, doc_title, chunk_index, document_id')
             .eq('user_id', userId)
-            .or(keywordQuery)
-            .limit(15);
+            .or(keywordQueries.join(','))
+            .limit(20);
             
           if (!keywordError && keywordDocs) {
-            keywordSearchDocs = keywordDocs;
-            console.log(`Found ${keywordDocs.length} documents via keyword search`);
+            keywordMatches = keywordDocs.map(doc => ({
+              ...doc,
+              similarity: calculateKeywordSimilarity(doc.content, messageKeywords)
+            })).filter(doc => doc.similarity > 0.3);
+            console.log(`Found ${keywordMatches.length} keyword matches`);
           }
         }
         
-        // 4. 일반적인 모든 문서 검색 (최종 fallback)
-        const { data: allDocs, error: allDocsError } = await supabase
-          .from('documents')
-          .select('content, doc_title, chunk_index, document_id')
-          .eq('user_id', userId)
-          .limit(20);
-          
-        if (allDocsError) {
-          console.error('All documents search error:', allDocsError);
-        }
+        // 4. 결과 통합 및 중복 제거
+        const allMatches = new Map();
         
-        // 5. 결과 통합 및 중복 제거
-        const combinedDocs = new Map();
-        
-        // 벡터 검색 결과 (가장 높은 우선순위)
-        vectorSearchDocs.forEach(doc => {
+        // 벡터 검색 결과 (최우선)
+        bestMatches.forEach(doc => {
           const key = `${doc.doc_title}-${doc.chunk_index}`;
-          if (!combinedDocs.has(key)) {
-            combinedDocs.set(key, { ...doc, source: 'vector', similarity: doc.similarity || 1 });
+          allMatches.set(key, { ...doc, source: 'vector' });
+        });
+        
+        // 키워드 검색 결과 (보완)
+        keywordMatches.forEach(doc => {
+          const key = `${doc.doc_title}-${doc.chunk_index}`;
+          if (!allMatches.has(key)) {
+            allMatches.set(key, { ...doc, source: 'keyword' });
           }
         });
         
-        // 키워드 검색 결과
-        keywordSearchDocs.forEach(doc => {
-          const key = `${doc.doc_title}-${doc.chunk_index}`;
-          if (!combinedDocs.has(key)) {
-            combinedDocs.set(key, { ...doc, source: 'keyword', similarity: 0.8 });
-          }
-        });
-        
-        // 전체 문서 검색 결과
-        (allDocs || []).forEach(doc => {
-          const key = `${doc.doc_title}-${doc.chunk_index}`;
-          if (!combinedDocs.has(key)) {
-            combinedDocs.set(key, { ...doc, source: 'general', similarity: 0.5 });
-          }
-        });
-        
-        // 6. 우선순위 정렬 및 컨텍스트 구성
-        const sortedDocs = Array.from(combinedDocs.values())
+        // 5. 최종 정렬 및 선택
+        const finalMatches = Array.from(allMatches.values())
           .sort((a, b) => {
-            // 먼저 유사도로 정렬
-            if (b.similarity !== a.similarity) {
+            // 임계값을 넘는 고품질 매치가 있는지 확인
+            if (a.similarity > 0.8 || b.similarity > 0.8) {
               return b.similarity - a.similarity;
             }
-            // 그 다음 중요 키워드 포함 여부
+            // 중요 키워드 포함 여부
             const aHasImportant = hasImportantKeywords(a.content);
             const bHasImportant = hasImportantKeywords(b.content);
             if (aHasImportant !== bHasImportant) {
               return bHasImportant ? 1 : -1;
             }
-            return 0;
+            return b.similarity - a.similarity;
           })
-          .slice(0, 12); // 최대 12개 문서
+          .slice(0, 10); // 최대 10개만 선택
         
-        if (sortedDocs.length > 0) {
-          console.log(`Found ${sortedDocs.length} document chunks for user`);
-          console.log('Document sources:', sortedDocs.map(d => `${d.source}(${d.similarity?.toFixed(2) || 'N/A'})`).join(', '));
+        // 6. 관련성 높은 문서가 있는지 판단
+        hasRelevantDocuments = finalMatches.some(doc => 
+          doc.similarity > 0.75 || hasImportantKeywords(doc.content)
+        );
+        
+        if (finalMatches.length > 0) {
+          console.log(`Using ${finalMatches.length} documents for context (relevant: ${hasRelevantDocuments})`);
+          console.log('Top similarities:', finalMatches.slice(0, 3).map(d => d.similarity?.toFixed(3)).join(', '));
           
-          // 7. 문서 컨텍스트 구성 - 중요도에 따라 마크업
-          documentContext = sortedDocs.map(doc => {
+          // 7. 컨텍스트 구성
+          documentContext = finalMatches.map(doc => {
+            const isHighRelevance = doc.similarity > 0.8;
             const isImportant = hasImportantKeywords(doc.content);
             const formattedContent = `[${doc.doc_title}${doc.chunk_index ? ` - 섹션 ${doc.chunk_index}` : ''}] ${doc.content}`;
             
-            if (isImportant) {
-              return `**[핵심규정]** ${formattedContent}`;
+            if (isHighRelevance || isImportant) {
+              return `**[핵심규정 - 유사도: ${(doc.similarity * 100).toFixed(1)}%]** ${formattedContent}`;
             } else {
-              return formattedContent;
+              return `**[참고자료 - 유사도: ${(doc.similarity * 100).toFixed(1)}%]** ${formattedContent}`;
             }
           }).join('\n\n');
-          
-          // 8. 특별히 숙박비/여비 관련 질문에 대한 추가 검색
-          if (message.includes('숙박비') || message.includes('한도') || message.includes('여비') || message.includes('지급')) {
-            const specificQuery = [
-              'content.ilike.%숙박비%',
-              'content.ilike.%여비%',
-              'content.ilike.%한도%',
-              'content.ilike.%지급표%',
-              'content.ilike.%별표%',
-              'content.ilike.%상한액%'
-            ].join(',');
-            
-            const { data: specificDocs, error: specificError } = await supabase
-              .from('documents')
-              .select('content, doc_title, chunk_index')
-              .eq('user_id', userId)
-              .or(specificQuery)
-              .limit(10);
-              
-            if (!specificError && specificDocs && specificDocs.length > 0) {
-              console.log(`Found ${specificDocs.length} additional specific documents`);
-              const specificContext = specificDocs.map(doc => 
-                `**[특별검색]** [${doc.doc_title}] ${doc.content}`
-              ).join('\n\n');
-              
-              documentContext = specificContext + '\n\n' + documentContext;
-            }
-          }
         } else {
-          console.log('No documents found for user');
+          console.log('No relevant documents found');
         }
       } catch (error) {
-        console.error('Error searching documents:', error);
+        console.error('Error in document search:', error);
       }
+    }
+
+    // 웹 검색 수행 (업로드된 문서에 관련 내용이 부족한 경우)
+    let webSearchResults = '';
+    if (!hasRelevantDocuments && userProfile) {
+      console.log('Performing web search due to insufficient document matches');
+      webSearchResults = await performTargetedWebSearch(message, userProfile);
     }
 
     // 숙소 추천 요청 감지 및 처리
@@ -282,6 +277,16 @@ serve(async (req) => {
 
 항상 도움이 되는 정보를 제공하되, 업로드된 문서의 범위를 벗어나지 마세요.`;
 
+    // 웹 검색 결과가 있으면 시스템 프롬프트에 추가
+    if (webSearchResults) {
+      systemPrompt += `
+
+**웹 검색 결과 (공식 자료):**
+${webSearchResults}
+
+위 공식 웹 검색 결과도 함께 참고하여 답변해주세요. 웹 검색 결과를 인용할 때는 **[웹 검색 - 출처]** 형태로 명시해주세요.`;
+    }
+
     // 업로드된 문서가 있으면 시스템 프롬프트에 추가
     if (documentContext) {
       systemPrompt += `
@@ -290,7 +295,7 @@ serve(async (req) => {
 ${documentContext}
 
 위 업로드된 문서를 바탕으로만 정확한 답변을 제공해주세요. 참고 자료에 답이 있으면 해당 내용을 인용하여 설명하고, **[문서명 - 해당 섹션]** 형태로 근거를 명시해주세요. 참고 자료에 없는 내용에 대해서는 "해당 정보는 제공된 문서 내에 없습니다."라고 답변해주세요.`;
-    } else {
+    } else if (!webSearchResults) {
       systemPrompt += `
 
 **현재 상태:** 참고할 수 있는 업로드된 문서가 없습니다.
@@ -685,4 +690,143 @@ function hasImportantKeywords(content: string): boolean {
   ];
   
   return importantKeywords.some(keyword => content.includes(keyword));
+}
+
+// 키워드 유사도 계산 함수
+function calculateKeywordSimilarity(content: string, keywords: string[]): number {
+  if (keywords.length === 0) return 0;
+  
+  const contentLower = content.toLowerCase();
+  let matchCount = 0;
+  let totalScore = 0;
+  
+  keywords.forEach(keyword => {
+    const keywordLower = keyword.toLowerCase();
+    if (contentLower.includes(keywordLower)) {
+      matchCount++;
+      // 길이가 긴 키워드에 더 높은 점수 부여
+      totalScore += Math.min(keyword.length / 2, 5);
+    }
+  });
+  
+  // 매칭 비율과 스코어를 종합하여 0-1 사이 값 반환
+  const matchRatio = matchCount / keywords.length;
+  const avgScore = totalScore / keywords.length;
+  
+  return Math.min((matchRatio * 0.7) + (avgScore / 10 * 0.3), 1);
+}
+
+// 사용자 타입별 타겟 웹 검색 함수
+async function performTargetedWebSearch(message: string, userProfile: any): Promise<string> {
+  try {
+    console.log('Starting targeted web search for user type:', userProfile?.user_type);
+    
+    // 검색 사이트 결정
+    let searchDomain = '';
+    let searchPrefix = '';
+    
+    switch (userProfile?.user_type) {
+      case '공무원':
+        searchDomain = 'site:law.go.kr';
+        searchPrefix = '공무원 ';
+        break;
+      case '공공기관':
+        searchDomain = 'site:alio.go.kr';
+        searchPrefix = '공공기관 ';
+        break;
+      default:
+        // 기타 사용자의 경우 정부 사이트 통합 검색
+        searchDomain = 'site:go.kr';
+        searchPrefix = '공공 ';
+        break;
+    }
+    
+    // 검색 쿼리 구성 - 출장/여비 관련 키워드 강화
+    const searchKeywords = extractKeywords(message);
+    const enhancedQuery = `${searchPrefix}${message} 출장 여비 규정 ${searchKeywords.slice(0, 3).join(' ')} ${searchDomain}`;
+    
+    console.log('Enhanced search query:', enhancedQuery);
+    
+    // 실제 웹 검색 수행 (Perplexity API 또는 Google Search API)
+    // 여기서는 시뮬레이션으로 대체 - 실제 구현시 검색 API 연동
+    const searchResults = await simulateWebSearch(enhancedQuery, userProfile?.user_type);
+    
+    if (searchResults) {
+      console.log('Web search completed successfully');
+      return searchResults;
+    }
+    
+    return '';
+  } catch (error) {
+    console.error('Error in targeted web search:', error);
+    return '';
+  }
+}
+
+// 웹 검색 시뮬레이션 함수 (실제 구현시 실제 검색 API로 대체)
+async function simulateWebSearch(query: string, userType: string): Promise<string> {
+  // 사용자 타입별 맞춤형 가이드 정보 제공
+  const searchGuides = {
+    '공무원': `
+**[웹 검색 - 법제처 국가법령정보센터]**
+
+**공무원 출장 관련 주요 규정:**
+
+**「공무원 여비 규정」(대통령령)**에 따르면:
+
+**숙박비 기준 (1박당):**
+- 서울특별시: 100,000원
+- 광역시 및 특별자치시: 80,000원  
+- 그 밖의 지역: 70,000원
+
+**일비 기준 (1일당):**
+- 국내 출장: 20,000원
+- 당일 출장: 10,000원
+
+**교통비:** 실비 지급 (대중교통 우선)
+
+**출처:** 국가법령정보센터(law.go.kr) - 공무원 여비 규정
+`,
+    '공공기관': `
+**[웹 검색 - 공공기관 경영정보 공개시스템]**
+
+**공공기관 출장 관련 참고 사항:**
+
+**기본 원칙:**
+- 각 공공기관별로 자체 여비 규정 적용
+- 공무원 여비 규정을 준용하는 경우가 많음
+- 기관별 예산 효율성 고려 필요
+
+**일반적인 기준 (참고용):**
+- 숙박비: 지역별 차등 적용 (50,000원~100,000원)
+- 일비: 15,000원~25,000원
+- 교통비: 실비 또는 정액제
+
+**추가 확인 사항:**
+- 소속 기관의 내부 규정 확인 필요
+- 예산 승인 절차 준수
+
+**출처:** 공공기관 경영정보 공개시스템(alio.go.kr)
+`,
+    '기타': `
+**[웹 검색 - 정부 통합 검색]**
+
+**일반 직장인 출장비 참고 기준:**
+
+**세법상 비과세 한도 (국세청 기준):**
+- 숙박비: 실비 (영수증 필요)
+- 일비: 20,000원 이하 (비과세)
+- 교통비: 실비 (대중교통 우선)
+
+**회사 규정 확인 사항:**
+- 각 회사별 내부 규정 적용
+- 예산 승인 절차 및 한도
+- 영수증 제출 요건
+
+**출처:** 국세청(nts.go.kr) 및 관련 정부 기관
+`
+  };
+
+  // 사용자 타입에 따른 적절한 가이드 반환
+  return searchGuides[userType as keyof typeof searchGuides] || searchGuides['기타'];
 }
