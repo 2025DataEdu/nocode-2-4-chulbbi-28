@@ -134,7 +134,6 @@ serve(async (req) => {
       } catch (error) {
         console.error('Error searching documents:', error);
       }
-      }
     }
 
     // 숙소 추천 요청 감지 및 처리
