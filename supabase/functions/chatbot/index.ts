@@ -64,7 +64,14 @@ function classifyQuery(query: string): 'regulation' | 'accommodation' | 'restaur
 
 // 지역명 추출 함수
 function extractLocationFromQuery(query: string): string | null {
-  // 간단한 지역명 추출 로직
+  // 서울 구 단위 지역명
+  const seoulDistricts = [
+    '마포구', '강남구', '강북구', '강서구', '강동구', '관악구', '광진구', '구로구',
+    '금천구', '노원구', '도봉구', '동대문구', '동작구', '서대문구', '서초구', '성동구',
+    '성북구', '송파구', '양천구', '영등포구', '용산구', '은평구', '종로구', '중구', '중랑구'
+  ];
+  
+  // 일반 시/도/군 지역명
   const cities = [
     '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종',
     '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주',
@@ -79,6 +86,14 @@ function extractLocationFromQuery(query: string): string | null {
     '제주시', '서귀포'
   ];
   
+  // 서울 구 단위 우선 검색
+  for (const district of seoulDistricts) {
+    if (query.includes(district)) {
+      return district;
+    }
+  }
+  
+  // 일반 지역명 검색
   for (const city of cities) {
     if (query.includes(city)) {
       return city;
@@ -93,6 +108,7 @@ async function searchAccommodations(location: string): Promise<string> {
   console.log(`숙소 검색 시작: ${location}`);
   
   try {
+    // 특정 구/군 검색
     const { data, error } = await supabase
       .from('accommodations')
       .select('사업장명, 소재지전체주소, 소재지전화, 양실수, 한실수')
@@ -104,7 +120,37 @@ async function searchAccommodations(location: string): Promise<string> {
       return '숙소 정보를 가져오는 중 오류가 발생했습니다.';
     }
 
+    // 특정 구/군에서 결과가 없으면 상위 지역(서울)에서 검색
     if (!data || data.length === 0) {
+      if (location.includes('마포구') || location.includes('강남구') || location.includes('구')) {
+        const upperLocation = '서울';
+        console.log(`${location}에서 결과 없음, ${upperLocation}로 확장 검색`);
+        
+        const { data: upperData, error: upperError } = await supabase
+          .from('accommodations')
+          .select('사업장명, 소재지전체주소, 소재지전화, 양실수, 한실수')
+          .or(`소재지전체주소.ilike.%${upperLocation}%,사업장명.ilike.%${upperLocation}%`)
+          .limit(10);
+
+        if (!upperError && upperData && upperData.length > 0) {
+          let accommodationResults = `현재 제공된 숙소 데이터에는 ${location} 내 숙소 정보가 없지만, 서울 전역에서 추천할 만한 숙소를 몇 가지 소개해드리겠습니다.\n\n`;
+          
+          upperData.forEach((accommodation, index) => {
+            accommodationResults += `${index + 1}. ${accommodation.사업장명 || '이름 미확인'}\n`;
+            accommodationResults += `   주소: ${accommodation.소재지전체주소 || '주소 미확인'}\n`;
+            if (accommodation.소재지전화) {
+              accommodationResults += `   전화: ${accommodation.소재지전화}\n`;
+            }
+            if (accommodation.양실수 || accommodation.한실수) {
+              accommodationResults += `   객실: 양실 ${accommodation.양실수 || 0}개, 한실 ${accommodation.한실수 || 0}개\n`;
+            }
+            accommodationResults += '\n';
+          });
+
+          return accommodationResults;
+        }
+      }
+      
       return `${location} 지역의 등록된 숙소 정보를 찾을 수 없습니다.`;
     }
 
@@ -134,6 +180,7 @@ async function searchRestaurants(location: string): Promise<string> {
   console.log(`맛집 검색 시작: ${location}`);
   
   try {
+    // 특정 구/군 검색
     const { data, error } = await supabase
       .from('certified_restaurant')
       .select('업소명, 도로명주소, 소재지주소, 전화번호, 주된음식종류, 음식의유형')
@@ -146,7 +193,41 @@ async function searchRestaurants(location: string): Promise<string> {
       return '맛집 정보를 가져오는 중 오류가 발생했습니다.';
     }
 
+    // 특정 구/군에서 결과가 없으면 상위 지역(서울)에서 검색
     if (!data || data.length === 0) {
+      if (location.includes('마포구') || location.includes('강남구') || location.includes('구')) {
+        const upperLocation = '서울';
+        console.log(`${location}에서 결과 없음, ${upperLocation}로 확장 검색`);
+        
+        const { data: upperData, error: upperError } = await supabase
+          .from('certified_restaurant')
+          .select('업소명, 도로명주소, 소재지주소, 전화번호, 주된음식종류, 음식의유형')
+          .or(`도로명주소.ilike.%${upperLocation}%,소재지주소.ilike.%${upperLocation}%,업소명.ilike.%${upperLocation}%`)
+          .eq('영업상태명', '영업/정상')
+          .limit(10);
+
+        if (!upperError && upperData && upperData.length > 0) {
+          let restaurantResults = `현재 제공된 맛집 데이터에는 ${location} 내 맛집 정보가 없지만, 서울 전역에서 추천할 만한 인증 맛집을 몇 가지 소개해드리겠습니다.\n\n`;
+          
+          upperData.forEach((restaurant, index) => {
+            restaurantResults += `${index + 1}. ${restaurant.업소명 || '이름 미확인'}\n`;
+            restaurantResults += `   주소: ${restaurant.도로명주소 || restaurant.소재지주소 || '주소 미확인'}\n`;
+            if (restaurant.전화번호) {
+              restaurantResults += `   전화: ${restaurant.전화번호}\n`;
+            }
+            if (restaurant.주된음식종류) {
+              restaurantResults += `   주요 메뉴: ${restaurant.주된음식종류}\n`;
+            }
+            if (restaurant.음식의유형) {
+              restaurantResults += `   음식 유형: ${restaurant.음식의유형}\n`;
+            }
+            restaurantResults += '\n';
+          });
+
+          return restaurantResults;
+        }
+      }
+      
       return `${location} 지역의 인증된 맛집 정보를 찾을 수 없습니다.`;
     }
 
