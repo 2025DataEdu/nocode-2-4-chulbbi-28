@@ -104,6 +104,12 @@ export function FormattedMessage({ content }: FormattedMessageProps) {
               {children}
             </blockquote>
           ),
+          // 취소선 스타일링 (비활성화)
+          del: ({ children }) => (
+            <span className="text-foreground">
+              {children}
+            </span>
+          ),
         }}
       >
         {content}
