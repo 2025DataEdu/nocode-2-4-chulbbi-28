@@ -8,6 +8,7 @@ import { MessageSquare, Send, X, Bot, User, RotateCcw, ChevronDown } from "lucid
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/useAuth"
+import { FormattedMessage } from "@/components/FormattedMessage"
 
 interface ChatbotProps {
   isOpen?: boolean
@@ -318,7 +319,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
                     : 'bg-muted text-foreground'
                 }`}
               >
-                {message.content}
+                <FormattedMessage content={message.content} />
               </div>
 
               {message.role === 'user' && (

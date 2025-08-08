@@ -129,11 +129,15 @@ serve(async (req) => {
 - 한국어로 응답
 - 구체적이고 실용적인 조언 제공
 - 필요시 단계별 가이드 제공
-- 마크다운 문법(**, ##, *, _등)을 절대 사용하지 마세요
-- 이모지 사용을 최소화하고 꼭 필요한 경우에만 사용하세요
+- 중요한 내용은 **볼드**로 강조하여 가독성을 높여주세요
+- 여비 규정이나 금액 정보는 가능한 표 형식으로 정리해주세요
 - 각 문단은 1~2줄로 작성하고, 문단 사이에는 반드시 빈 줄을 하나씩 넣어주세요
 - 문단과 문단 사이는 반드시 줄바꿈을 두 번 넣어 구분해주세요
-- 순수 텍스트로만 응답하되, 문단 구분은 반드시 유지해주세요
+
+표 형식 예시:
+**구분**: 내용
+**금액**: 50,000원
+**기준**: 1박당
 
 특별 기능:
 - 사용자가 출장 정보(목적지, 일정, 예산 등)를 말하면 새 출장 등록을 도와드릴 수 있습니다.
@@ -161,7 +165,7 @@ ${documentContext}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1-2025-04-14',
         messages: [
           { role: 'system', content: systemPrompt },
           ...(Array.isArray(context?.previousMessages) ? context.previousMessages.slice(-5) : []),
