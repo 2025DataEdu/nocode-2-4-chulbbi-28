@@ -30,14 +30,10 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     {
       id: '1',
       content: `안녕하세요! 출장비서 출삐입니다.
-
-출삐 사용 가이드
-
 목적지와 일정을 함께 말씀해주세요.
+
 예시: "서울 출장, 8월 6일~8일 매일 9시~6시"
-
 출장 규정 확인 후 자동 등록해드립니다.
-
 궁금한 점은 언제든 물어보세요.`,
       role: 'assistant',
       timestamp: new Date()
@@ -194,14 +190,10 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     setMessages([{
       id: '1',
       content: `안녕하세요! 출장비서 출삐입니다.
-
-출삐 사용 가이드
-
 목적지와 일정을 함께 말씀해주세요.
+
 예시: "서울 출장, 8월 6일~8일 매일 9시~6시"
-
 출장 규정 확인 후 자동 등록해드립니다.
-
 궁금한 점은 언제든 물어보세요.`,
       role: 'assistant',
       timestamp: new Date()
