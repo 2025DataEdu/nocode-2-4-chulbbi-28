@@ -185,7 +185,7 @@ async function searchRestaurants(location: string): Promise<string> {
       .from('certified_restaurant')
       .select('업소명, 도로명주소, 소재지주소, 전화번호, 주된음식종류, 음식의유형')
       .or(`도로명주소.ilike.%${location}%,소재지주소.ilike.%${location}%,업소명.ilike.%${location}%`)
-      .eq('영업상태명', '영업/정상')
+      .eq('영업상태명', '영업')
       .limit(10);
 
     if (error) {
@@ -203,7 +203,7 @@ async function searchRestaurants(location: string): Promise<string> {
           .from('certified_restaurant')
           .select('업소명, 도로명주소, 소재지주소, 전화번호, 주된음식종류, 음식의유형')
           .or(`도로명주소.ilike.%${upperLocation}%,소재지주소.ilike.%${upperLocation}%,업소명.ilike.%${upperLocation}%`)
-          .eq('영업상태명', '영업/정상')
+          .eq('영업상태명', '영업')
           .limit(10);
 
         if (!upperError && upperData && upperData.length > 0) {
