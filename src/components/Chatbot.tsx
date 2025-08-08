@@ -246,40 +246,144 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
   }
 
-  const suggestionQuestions = [
-    {
-      category: "출장 관련",
-      questions: [
-        "숙소 추천해줘",
-        "영수증 잃어버렸는데 여비 나올까?",
-        "당일치기 출장 여비는 얼마야?"
-      ]
-    },
-    {
-      category: "여비 규정",
-      questions: [
-        "숙박비 한도가 얼마야?",
-        "관외 출장 일비는 얼마야?",
-        "교통비 규정 알려줘"
-      ]
-    },
-    {
-      category: "출장 등록",
-      questions: [
-        "대전 출장 등록해줘",
-        "내일 서울 출장 갈 건데",
-        "3박 4일 부산 출장 계획 세워줘"
-      ]
-    },
-    {
-      category: "기타 문의",
-      questions: [
-        "출장비 계산해줘",
-        "출장 체크리스트 알려줘",
-        "출장 규정 문서 어떻게 올려?"
+  // 대화 맥락 기반 추천 질문 생성
+  const getContextualSuggestions = () => {
+    if (messages.length <= 1) {
+      // 초기 상태
+      return [
+        {
+          category: "출장 관련",
+          questions: [
+            "숙소 추천해줘",
+            "영수증 잃어버렸는데 여비 나올까?",
+            "당일치기 출장 여비는 얼마야?"
+          ]
+        },
+        {
+          category: "여비 규정",
+          questions: [
+            "숙박비 한도가 얼마야?",
+            "관외 출장 일비는 얼마야?",
+            "교통비 규정 알려줘"
+          ]
+        }
       ]
     }
-  ]
+
+    const lastMessage = messages[messages.length - 1]
+    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content?.toLowerCase() || ''
+    const lastAssistantMessage = lastMessage.role === 'assistant' ? lastMessage.content.toLowerCase() : ''
+    
+    // 숙소 관련 대화 후
+    if (lastUserMessage.includes('숙소') || lastUserMessage.includes('호텔') || lastAssistantMessage.includes('호텔') || lastAssistantMessage.includes('숙박')) {
+      return [
+        {
+          category: "숙소 관련",
+          questions: [
+            "다른 지역 숙소도 추천해줘",
+            "숙박비 한도가 얼마야?",
+            "호텔 예약은 언제까지 해야 해?"
+          ]
+        },
+        {
+          category: "출장 계획",
+          questions: [
+            "교통편도 알아봐줘",
+            "출장 일정 짜줘",
+            "출장비 총액 계산해줘"
+          ]
+        }
+      ]
+    }
+    
+    // 여비 규정 관련 대화 후
+    if (lastUserMessage.includes('여비') || lastUserMessage.includes('규정') || lastUserMessage.includes('한도') || lastAssistantMessage.includes('한도') || lastAssistantMessage.includes('여비')) {
+      return [
+        {
+          category: "여비 상세",
+          questions: [
+            "다른 항목 여비도 알려줘",
+            "영수증 없으면 어떻게 해?",
+            "관외출장과 관내출장 차이가 뭐야?"
+          ]
+        },
+        {
+          category: "출장 실행",
+          questions: [
+            "출장 등록해줘",
+            "출장비 미리 계산해줘",
+            "체크리스트 알려줘"
+          ]
+        }
+      ]
+    }
+    
+    // 출장 등록 관련 대화 후  
+    if (lastUserMessage.includes('등록') || lastUserMessage.includes('출장') || lastAssistantMessage.includes('등록') || lastAssistantMessage.includes('저장')) {
+      return [
+        {
+          category: "등록 후속",
+          questions: [
+            "출장 계획 확인해줘",
+            "필요한 준비물 알려줘",
+            "출장비 예상 금액은?"
+          ]
+        },
+        {
+          category: "추가 정보",
+          questions: [
+            "숙소 추천해줘",
+            "현지 맛집 알려줘",
+            "교통편 정보 줘"
+          ]
+        }
+      ]
+    }
+    
+    // 영수증 관련 대화 후
+    if (lastUserMessage.includes('영수증') || lastUserMessage.includes('잃어버') || lastAssistantMessage.includes('영수증')) {
+      return [
+        {
+          category: "영수증 처리",
+          questions: [
+            "영수증 재발급 방법은?",
+            "카드 내역서도 인정돼?",
+            "영수증 없이 정산 가능한 항목은?"
+          ]
+        },
+        {
+          category: "정산 관련",
+          questions: [
+            "정산 기한이 언제야?",
+            "정산 서류 어떻게 제출해?",
+            "출장비 언제 나와?"
+          ]
+        }
+      ]
+    }
+    
+    // 기본 추천 (맥락에 맞지 않는 경우)
+    return [
+      {
+        category: "인기 질문",
+        questions: [
+          "출장 등록해줘",
+          "숙소 추천해줘",
+          "여비 규정 알려줘"
+        ]
+      },
+      {
+        category: "자주 묻는 질문",
+        questions: [
+          "영수증 분실 시 처리 방법은?",
+          "출장비 계산해줘",
+          "출장 체크리스트 알려줘"
+        ]
+      }
+    ]
+  }
+
+  const suggestionQuestions = getContextualSuggestions()
 
   const handleSuggestionClick = (question: string) => {
     setInputMessage(question)
@@ -410,7 +514,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
         )}
 
         {/* 추천 질문 섹션 */}
-        {showSuggestions && messages.length === 1 && (
+        {showSuggestions && (
           <div className="px-4 pb-2">
             <div className="text-xs text-muted-foreground mb-2">💡 추천 질문</div>
             <div className="space-y-2 max-h-32 overflow-y-auto">
