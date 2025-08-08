@@ -11,10 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import { TopNavigation } from "@/components/TopNavigation";
 import { Tables } from "@/integrations/supabase/types";
 import { isValidTrip, isValidDateString } from "@/utils/typeGuards";
+import { DocumentUploadDialog } from "@/components/DocumentUploadDialog";
 export function Dashboard() {
   const [trips, setTrips] = useState<Tables<'trips'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'ongoing' | 'planned' | 'completed' | 'all'>('ongoing');
+  const [uploadOpen, setUploadOpen] = useState(false);
   const {
     user
   } = useAuth();
@@ -167,10 +169,16 @@ export function Dashboard() {
           </h1>
           <p className="text-body text-muted-foreground">오늘도 즐거운 출장 되세요</p>
         </div>
-        <Button variant="gradient" size="lg" className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300" onClick={() => navigate('/register')}>
-          <Plus className="mr-2 h-5 w-5" />
-          새 출장 계획
-        </Button>
+          <div className="flex w-full sm:w-auto gap-2">
+            <Button variant="secondary" size="lg" className="w-full sm:w-auto" onClick={() => setUploadOpen(true)}>
+              <UploadCloud className="mr-2 h-5 w-5" />
+              규정 PDF 업로드
+            </Button>
+            <Button variant="gradient" size="lg" className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300" onClick={() => navigate('/register')}>
+              <Plus className="mr-2 h-5 w-5" />
+              새 출장 계획
+            </Button>
+          </div>
       </div>
 
       {/* 핵심 통계 - 빅테크 스타일 카드 디자인 */}
@@ -293,5 +301,6 @@ export function Dashboard() {
       </div>
 
       </div>
+      <DocumentUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
     </div>;
 }
