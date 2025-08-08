@@ -18,26 +18,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
+    let mounted = true;
+    
+    // 최소 로딩 시간 보장 (깜빡임 방지)
+    const minLoadingTime = setTimeout(() => {
+      if (mounted && isInitialized) {
+        setLoading(false);
+      }
+    }, 300);
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        setLoading(false)
+        if (mounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setIsInitialized(true)
+          
+          // 최소 로딩 시간이 지났으면 즉시 로딩 완료
+          if (Date.now() - startTime >= 300) {
+            setLoading(false)
+          }
+        }
       }
     )
 
+    const startTime = Date.now();
+
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
+      if (mounted) {
+        setSession(session)
+        setUser(session?.user ?? null)
+        setIsInitialized(true)
+        
+        // 최소 로딩 시간이 지났으면 즉시 로딩 완료
+        if (Date.now() - startTime >= 300) {
+          setLoading(false)
+        }
+      }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false;
+      clearTimeout(minLoadingTime);
+      subscription.unsubscribe();
+    }
   }, [])
+
+  // isInitialized 상태가 변경될 때 로딩 상태 업데이트
+  useEffect(() => {
+    if (isInitialized) {
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isInitialized])
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
