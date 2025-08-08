@@ -96,8 +96,8 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     const startWidth = chatbotSize.width
     
     const handleMouseMove = (e: MouseEvent) => {
-      // 오른쪽에서 왼쪽으로 드래그하면 크기가 커지도록
-      const deltaX = startX - e.clientX
+      // 오른쪽으로 드래그하면 크기가 커지도록
+      const deltaX = e.clientX - startX
       const newWidth = Math.min(Math.max(startWidth + deltaX, 280), window.innerWidth * 0.8)
       
       setChatbotSize(prev => ({ ...prev, width: newWidth }))
@@ -428,14 +428,14 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
         className={cardClassName} 
         style={cardStyle}
       >
-        {/* 왼쪽 리사이즈 핸들 (floating 모드일 때만) */}
+        {/* 오른쪽 리사이즈 핸들 (floating 모드일 때만) */}
         {position === 'floating' && (
           <div
-            className={`absolute top-0 left-0 w-1 h-full cursor-ew-resize bg-primary/20 hover:bg-primary/40 transition-colors group ${isDragging ? 'bg-primary/60' : ''}`}
+            className={`absolute top-0 right-0 w-1 h-full cursor-ew-resize bg-primary/20 hover:bg-primary/40 transition-colors group ${isDragging ? 'bg-primary/60' : ''}`}
             onMouseDown={handleResizeStart}
             title="창 크기 조절 (좌우로 드래그)"
           >
-            <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1/2 w-3 h-8 bg-primary/60 rounded-r-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 w-3 h-8 bg-primary/60 rounded-l-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <GripVertical className="h-3 w-3 text-primary-foreground" />
             </div>
           </div>
