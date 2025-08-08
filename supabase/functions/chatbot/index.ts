@@ -16,8 +16,22 @@ const corsHeaders = {
 const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
 // 질문 유형 분류 함수
-function classifyQuery(query: string): 'regulation' | 'accommodation' | 'restaurant' | 'attraction' | 'general' {
+function classifyQuery(query: string): 'regulation' | 'accommodation' | 'restaurant' | 'attraction' | 'trip_creation' | 'general' {
   const lowercaseQuery = query.toLowerCase();
+  
+  // 출장 등록/생성 관련 키워드 - 최우선
+  const tripCreationKeywords = [
+    '등록', '생성', '추가', '신청', '만들', '새로', '계획', '예약',
+    '출장 가', '출장을', '출장 신청', '출장 등록', '출장 생성', '출장 계획',
+    '서울 출장', '부산 출장', '대전 출장', '출장 일정'
+  ];
+  
+  // 출장 생성 키워드 우선 체크
+  for (const keyword of tripCreationKeywords) {
+    if (lowercaseQuery.includes(keyword)) {
+      return 'trip_creation';
+    }
+  }
   
   // 규정 관련 키워드
   const regulationKeywords = [
@@ -497,6 +511,180 @@ ${searchContext}
   }
 }
 
+// 출장 정보 추출 및 생성 함수
+async function extractTripInfoAndCreate(message: string, userId: string): Promise<{ success: boolean; tripData?: any; message: string }> {
+  console.log('출장 정보 추출 시작:', message);
+  
+  try {
+    // OpenAI API를 사용하여 출장 정보 추출
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `당신은 출장 정보 추출 전문가입니다. 사용자의 메시지에서 출장 관련 정보를 추출하여 JSON 형태로 반환해주세요.
+
+다음 형식으로 출장 정보를 추출해주세요:
+{
+  "destination": "목적지 (시/구/군 포함)",
+  "departure_location": "출발지 (현재 위치 추정)",
+  "purpose": "출장 목적",
+  "start_date": "YYYY-MM-DD",
+  "end_date": "YYYY-MM-DD", 
+  "start_time": "HH:MM",
+  "end_time": "HH:MM",
+  "transportation": "교통수단 (자차/기차/버스/항공 등)",
+  "accommodation_needed": true/false,
+  "trip_type": "관내/관외",
+  "notes": "추가 메모"
+}
+
+추출 규칙:
+1. 목적지는 시/구/군 단위로 정확하게 추출
+2. 출발지가 명시되지 않으면 "서울특별시"로 기본 설정
+3. 날짜가 불명확하면 null로 설정
+4. 시간이 없으면 start_time: "09:00", end_time: "18:00"으로 기본 설정
+5. 교통수단이 명시되지 않으면 "미정"으로 설정
+6. 출장 목적이 없으면 "업무 관련"으로 설정
+7. 관내/관외는 목적지 기준으로 판단 (서울 내부면 관내, 서울 외부면 관외)
+
+JSON만 반환하고 다른 텍스트는 포함하지 마세요.`
+          },
+          {
+            role: 'user',
+            content: message
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`OpenAI API 오류: ${response.status}`);
+      return { success: false, message: '출장 정보를 추출할 수 없습니다.' };
+    }
+
+    const data = await response.json();
+    const extractedInfo = data.choices[0].message.content;
+    
+    console.log('추출된 출장 정보:', extractedInfo);
+    
+    // JSON 파싱
+    let tripInfo;
+    try {
+      tripInfo = JSON.parse(extractedInfo);
+    } catch (parseError) {
+      console.error('JSON 파싱 오류:', parseError);
+      return { success: false, message: '출장 정보 형식이 올바르지 않습니다.' };
+    }
+
+    // 필수 정보 검증
+    if (!tripInfo.destination || !tripInfo.start_date || !tripInfo.end_date) {
+      return { 
+        success: false, 
+        message: '출장 등록을 위해서는 **목적지**, **시작일**, **종료일**이 필요합니다.\n\n예시: "서울 출장, 8월 15일부터 17일까지"' 
+      };
+    }
+
+    // 거리 계산 (간단한 추정)
+    const estimatedDistance = calculateEstimatedDistance(tripInfo.departure_location, tripInfo.destination);
+
+    // Supabase에 출장 데이터 저장
+    const { data: newTrip, error: tripError } = await supabase
+      .from('trips')
+      .insert({
+        user_id: userId,
+        destination: tripInfo.destination,
+        departure_location: tripInfo.departure_location || '서울특별시',
+        purpose: tripInfo.purpose || '업무 관련',
+        start_date: tripInfo.start_date,
+        end_date: tripInfo.end_date,
+        start_time: tripInfo.start_time || '09:00',
+        end_time: tripInfo.end_time || '18:00',
+        transportation: tripInfo.transportation || '미정',
+        accommodation_needed: tripInfo.accommodation_needed || false,
+        trip_type: tripInfo.trip_type || '관외',
+        distance_km: estimatedDistance,
+        notes: tripInfo.notes || null,
+        status: 'planned',
+        budget: 0,
+        spent: 0
+      })
+      .select()
+      .single();
+
+    if (tripError) {
+      console.error('출장 저장 오류:', tripError);
+      return { success: false, message: '출장 저장 중 오류가 발생했습니다.' };
+    }
+
+    console.log('출장 저장 성공:', newTrip);
+
+    // 성공 메시지 생성
+    const successMessage = `✅ **출장이 성공적으로 등록되었습니다!**
+
+📋 **등록된 출장 정보:**
+- **목적지:** ${tripInfo.destination}
+- **출발지:** ${tripInfo.departure_location || '서울특별시'}
+- **기간:** ${tripInfo.start_date} ~ ${tripInfo.end_date}
+- **시간:** ${tripInfo.start_time || '09:00'} - ${tripInfo.end_time || '18:00'}
+- **목적:** ${tripInfo.purpose || '업무 관련'}
+- **교통수단:** ${tripInfo.transportation || '미정'}
+- **숙박 필요:** ${tripInfo.accommodation_needed ? '예' : '아니오'}
+- **거리:** 약 ${estimatedDistance}km
+
+다음에 필요한 작업:
+- 숙소 예약 ${tripInfo.accommodation_needed ? '✅ 필요' : '❌ 불필요'}
+- 교통편 예약
+- 출장비 신청
+
+추가로 도움이 필요하시면 언제든 말씀해주세요! 😊`;
+
+    return { 
+      success: true, 
+      tripData: newTrip, 
+      message: successMessage 
+    };
+
+  } catch (error) {
+    console.error('출장 생성 중 오류:', error);
+    return { 
+      success: false, 
+      message: '출장 등록 중 오류가 발생했습니다. 다시 시도해주세요.' 
+    };
+  }
+}
+
+// 간단한 거리 추정 함수
+function calculateEstimatedDistance(departure: string, destination: string): number {
+  // 주요 도시 간 거리 데이터 (km)
+  const distances: Record<string, Record<string, number>> = {
+    '서울': { '부산': 400, '대구': 300, '대전': 150, '광주': 300, '인천': 40 },
+    '부산': { '서울': 400, '대구': 100, '대전': 280, '광주': 180 },
+    '대구': { '서울': 300, '부산': 100, '대전': 180, '광주': 200 },
+    '대전': { '서울': 150, '부산': 280, '대구': 180, '광주': 150 },
+    '광주': { '서울': 300, '부산': 180, '대구': 200, '대전': 150 }
+  };
+
+  // 출발지와 목적지에서 주요 도시명 추출
+  const depCity = Object.keys(distances).find(city => departure?.includes(city)) || '서울';
+  const destCity = Object.keys(distances).find(city => destination?.includes(city)) || '서울';
+
+  // 같은 도시 내 이동이면 50km로 추정
+  if (depCity === destCity) {
+    return 50;
+  }
+
+  return distances[depCity]?.[destCity] || distances[destCity]?.[depCity] || 200;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -619,6 +807,43 @@ ${restaurantData}
 ${attractionData}
 
 사용자의 질문에 대해 위 데이터를 기반으로 친절하고 상세하게 답변해주세요. 관광지 정보를 보기 좋게 정리하여 제공하고, 각 관광지의 특징과 볼거리를 설명해주세요.`;
+      
+    } else if (queryType === 'trip_creation') {
+      // 출장 생성 요청 처리
+      console.log('출장 생성 요청 처리');
+      
+      if (!userId) {
+        systemPrompt = `죄송합니다. 출장 등록을 위해서는 로그인이 필요합니다. 
+        로그인 후 다시 시도해주세요.`;
+      } else {
+        // 출장 정보 추출 및 생성
+        const tripResult = await extractTripInfoAndCreate(message, userId);
+        
+        if (tripResult.success) {
+          // 출장 생성 성공
+          return new Response(JSON.stringify({ 
+            reply: tripResult.message,
+            success: true,
+            tripSaved: true,
+            tripData: tripResult.tripData
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } else {
+          // 출장 생성 실패 - 추가 정보 요청
+          systemPrompt = `출장 등록을 도와드리겠습니다.
+
+${tripResult.message}
+
+추가로 필요한 정보가 있으시면 말씀해주세요. 출장 등록을 위해서는 다음 정보가 필요합니다:
+- **목적지** (시/구/군 포함)
+- **출장 기간** (시작일 ~ 종료일)
+- **출장 목적** (선택사항)
+- **교통수단** (선택사항)
+
+예시: "서울 마포구 출장, 8월 15일부터 17일까지, 교육 참석"`;
+        }
+      }
       
     } else {
       // 규정 관련 질문 또는 일반 질문 - 사용자 업로드 문서 기반
