@@ -14,6 +14,147 @@ export type Database = {
   }
   public: {
     Tables: {
+      accommodations: {
+        Row: {
+          개방서비스명: string | null
+          개방서비스아이디: string | null
+          개방자치단체코드: number | null
+          건물소유구분명: string | null
+          건물지상층수: string | null
+          건물지하층수: string | null
+          관리번호: string | null
+          남성종사자수: string | null
+          다중이용업소여부: string | null
+          데이터갱신구분: string | null
+          데이터갱신일자: string | null
+          도로명우편번호: string | null
+          도로명전체주소: string | null
+          번호: number | null
+          사업장명: string | null
+          사용끝지상층: string | null
+          사용끝지하층: string | null
+          사용시작지상층: string | null
+          사용시작지하층: string | null
+          상세영업상태명: string | null
+          상세영업상태코드: number | null
+          소재지면적: string | null
+          소재지우편번호: string | null
+          소재지전체주소: string | null
+          소재지전화: string | null
+          양실수: string | null
+          업태구분명: string | null
+          여성종사자수: string | null
+          영업상태구분코드: number | null
+          영업상태명: string | null
+          위생업태명: string | null
+          인허가일자: string | null
+          인허가취소일자: string | null
+          재개업일자: string | null
+          조건부허가시작일자: string | null
+          조건부허가신고사유: string | null
+          조건부허가종료일자: string | null
+          "좌표정보x(epsg5174)": string | null
+          "좌표정보y(epsg5174)": string | null
+          최종수정시점: string | null
+          폐업일자: string | null
+          한실수: string | null
+          휴업시작일자: string | null
+          휴업종료일자: string | null
+        }
+        Insert: {
+          개방서비스명?: string | null
+          개방서비스아이디?: string | null
+          개방자치단체코드?: number | null
+          건물소유구분명?: string | null
+          건물지상층수?: string | null
+          건물지하층수?: string | null
+          관리번호?: string | null
+          남성종사자수?: string | null
+          다중이용업소여부?: string | null
+          데이터갱신구분?: string | null
+          데이터갱신일자?: string | null
+          도로명우편번호?: string | null
+          도로명전체주소?: string | null
+          번호?: number | null
+          사업장명?: string | null
+          사용끝지상층?: string | null
+          사용끝지하층?: string | null
+          사용시작지상층?: string | null
+          사용시작지하층?: string | null
+          상세영업상태명?: string | null
+          상세영업상태코드?: number | null
+          소재지면적?: string | null
+          소재지우편번호?: string | null
+          소재지전체주소?: string | null
+          소재지전화?: string | null
+          양실수?: string | null
+          업태구분명?: string | null
+          여성종사자수?: string | null
+          영업상태구분코드?: number | null
+          영업상태명?: string | null
+          위생업태명?: string | null
+          인허가일자?: string | null
+          인허가취소일자?: string | null
+          재개업일자?: string | null
+          조건부허가시작일자?: string | null
+          조건부허가신고사유?: string | null
+          조건부허가종료일자?: string | null
+          "좌표정보x(epsg5174)"?: string | null
+          "좌표정보y(epsg5174)"?: string | null
+          최종수정시점?: string | null
+          폐업일자?: string | null
+          한실수?: string | null
+          휴업시작일자?: string | null
+          휴업종료일자?: string | null
+        }
+        Update: {
+          개방서비스명?: string | null
+          개방서비스아이디?: string | null
+          개방자치단체코드?: number | null
+          건물소유구분명?: string | null
+          건물지상층수?: string | null
+          건물지하층수?: string | null
+          관리번호?: string | null
+          남성종사자수?: string | null
+          다중이용업소여부?: string | null
+          데이터갱신구분?: string | null
+          데이터갱신일자?: string | null
+          도로명우편번호?: string | null
+          도로명전체주소?: string | null
+          번호?: number | null
+          사업장명?: string | null
+          사용끝지상층?: string | null
+          사용끝지하층?: string | null
+          사용시작지상층?: string | null
+          사용시작지하층?: string | null
+          상세영업상태명?: string | null
+          상세영업상태코드?: number | null
+          소재지면적?: string | null
+          소재지우편번호?: string | null
+          소재지전체주소?: string | null
+          소재지전화?: string | null
+          양실수?: string | null
+          업태구분명?: string | null
+          여성종사자수?: string | null
+          영업상태구분코드?: number | null
+          영업상태명?: string | null
+          위생업태명?: string | null
+          인허가일자?: string | null
+          인허가취소일자?: string | null
+          재개업일자?: string | null
+          조건부허가시작일자?: string | null
+          조건부허가신고사유?: string | null
+          조건부허가종료일자?: string | null
+          "좌표정보x(epsg5174)"?: string | null
+          "좌표정보y(epsg5174)"?: string | null
+          최종수정시점?: string | null
+          폐업일자?: string | null
+          한실수?: string | null
+          휴업시작일자?: string | null
+          휴업종료일자?: string | null
+        }
+        Relationships: []
+      }
       business_trip_allowances: {
         Row: {
           created_at: string
@@ -44,6 +185,123 @@ export type Database = {
           region?: string
           transportation_rate_per_km?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      certified_restaurant: {
+        Row: {
+          개방서비스ID: string | null
+          개방자치단체코드: number | null
+          관리번호: string | null
+          데이터갱신구분: string | null
+          데이터갱신일자: string | null
+          도로명주소: string | null
+          번호: number | null
+          불가사유: string | null
+          불가일자: string | null
+          소재지주소: string | null
+          신청일자: number | null
+          업소명: string | null
+          영업상태구분코드: number | null
+          영업상태명: string | null
+          음식의유형: string | null
+          인허가번호: number | null
+          재지정일자: string | null
+          전화번호: string | null
+          주된음식종류: string | null
+          지정일자: number | null
+          지정취소사유: string | null
+          지정취소일자: string | null
+          최종수정일자: string | null
+          폐업일자: string | null
+        }
+        Insert: {
+          개방서비스ID?: string | null
+          개방자치단체코드?: number | null
+          관리번호?: string | null
+          데이터갱신구분?: string | null
+          데이터갱신일자?: string | null
+          도로명주소?: string | null
+          번호?: number | null
+          불가사유?: string | null
+          불가일자?: string | null
+          소재지주소?: string | null
+          신청일자?: number | null
+          업소명?: string | null
+          영업상태구분코드?: number | null
+          영업상태명?: string | null
+          음식의유형?: string | null
+          인허가번호?: number | null
+          재지정일자?: string | null
+          전화번호?: string | null
+          주된음식종류?: string | null
+          지정일자?: number | null
+          지정취소사유?: string | null
+          지정취소일자?: string | null
+          최종수정일자?: string | null
+          폐업일자?: string | null
+        }
+        Update: {
+          개방서비스ID?: string | null
+          개방자치단체코드?: number | null
+          관리번호?: string | null
+          데이터갱신구분?: string | null
+          데이터갱신일자?: string | null
+          도로명주소?: string | null
+          번호?: number | null
+          불가사유?: string | null
+          불가일자?: string | null
+          소재지주소?: string | null
+          신청일자?: number | null
+          업소명?: string | null
+          영업상태구분코드?: number | null
+          영업상태명?: string | null
+          음식의유형?: string | null
+          인허가번호?: number | null
+          재지정일자?: string | null
+          전화번호?: string | null
+          주된음식종류?: string | null
+          지정일자?: number | null
+          지정취소사유?: string | null
+          지정취소일자?: string | null
+          최종수정일자?: string | null
+          폐업일자?: string | null
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          doc_title: string | null
+          document_id: string
+          embedding: string
+          id: string
+          source_path: string | null
+          user_id: string
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string
+          doc_title?: string | null
+          document_id: string
+          embedding: string
+          id?: string
+          source_path?: string | null
+          user_id: string
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          doc_title?: string | null
+          document_id?: string
+          embedding?: string
+          id?: string
+          source_path?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -88,6 +346,11 @@ export type Database = {
           description: string | null
           file_url: string | null
           id: string
+          image_path: string | null
+          image_size_bytes: number | null
+          mime_type: string | null
+          ocr_confidence: number | null
+          ocr_text: string | null
           receipt_date: string
           trip_id: string
         }
@@ -98,6 +361,11 @@ export type Database = {
           description?: string | null
           file_url?: string | null
           id?: string
+          image_path?: string | null
+          image_size_bytes?: number | null
+          mime_type?: string | null
+          ocr_confidence?: number | null
+          ocr_text?: string | null
           receipt_date: string
           trip_id: string
         }
@@ -108,6 +376,11 @@ export type Database = {
           description?: string | null
           file_url?: string | null
           id?: string
+          image_path?: string | null
+          image_size_bytes?: number | null
+          mime_type?: string | null
+          ocr_confidence?: number | null
+          ocr_text?: string | null
           receipt_date?: string
           trip_id?: string
         }
@@ -195,9 +468,117 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
       check_username_availability: {
         Args: { username_to_check: string }
         Returns: boolean
+      }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
+      match_documents: {
+        Args: {
+          query_embedding: string
+          match_count: number
+          filter_document_id?: string
+        }
+        Returns: {
+          id: string
+          content: string
+          doc_title: string
+          source_path: string
+          chunk_index: number
+          similarity: number
+          document_id: string
+        }[]
+      }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
       }
     }
     Enums: {
