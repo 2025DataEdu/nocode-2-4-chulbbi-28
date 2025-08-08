@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { TripDetailsMap } from '@/components/TripDetailsMap'
-import { DetailedRecommendations } from '@/components/DetailedRecommendations'
+import { NearbyRecommendations } from '@/components/NearbyRecommendations'
 import { TripChecklist } from '@/components/TripChecklist'
 import { ArrowLeft, Calendar, MapPin, Clock, Users, Edit3, Share2, Save, X, Copy, Check } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
@@ -492,7 +492,11 @@ export default function TripDetails() {
               latitude={coordinates?.lat}
               longitude={coordinates?.lng}
             />
-            <DetailedRecommendations destination={trip.destination} />
+            <NearbyRecommendations 
+              destination={trip.destination}
+              latitude={coordinates?.lat}
+              longitude={coordinates?.lng}
+            />
           </div>
         </TabsContent>
       </Tabs>
