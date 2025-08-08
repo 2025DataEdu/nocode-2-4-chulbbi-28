@@ -16,7 +16,7 @@ const corsHeaders = {
 const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
 // 질문 유형 분류 함수
-function classifyQuery(query: string): 'regulation' | 'accommodation' | 'restaurant' | 'general' {
+function classifyQuery(query: string): 'regulation' | 'accommodation' | 'restaurant' | 'attraction' | 'general' {
   const lowercaseQuery = query.toLowerCase();
   
   // 규정 관련 키워드
@@ -40,7 +40,15 @@ function classifyQuery(query: string): 'regulation' | 'accommodation' | 'restaur
     '맛있는', '유명한', '추천', '인증', '맛', '요리', '메뉴', '먹거리'
   ];
   
-  // 우선순위: 규정 > 숙소 > 맛집
+  // 관광지/관광 관련 키워드
+  const attractionKeywords = [
+    '관광지', '관광', '볼거리', '놀거리', '구경', '여행', '관광명소',
+    '명소', '박물관', '공원', '유적지', '문화재', '테마파크', '놀이공원',
+    '갈 만한 곳', '가볼만한', '데이트', '산책', '구경거리', '체험',
+    '전시', '문화', '역사', '자연', '경치', '풍경', '사진', '인스타'
+  ];
+  
+  // 우선순위: 규정 > 관광지 > 숙소 > 맛집
   for (const keyword of regulationKeywords) {
     if (lowercaseQuery.includes(keyword)) {
       return 'regulation';
@@ -53,9 +61,16 @@ function classifyQuery(query: string): 'regulation' | 'accommodation' | 'restaur
     }
   }
   
+  
   for (const keyword of restaurantKeywords) {
     if (lowercaseQuery.includes(keyword)) {
       return 'restaurant';
+    }
+  }
+  
+  for (const keyword of attractionKeywords) {
+    if (lowercaseQuery.includes(keyword)) {
+      return 'attraction';
     }
   }
   
@@ -252,6 +267,96 @@ async function searchRestaurants(location: string): Promise<string> {
   } catch (error) {
     console.error('맛집 검색 중 오류:', error);
     return '맛집 검색 중 오류가 발생했습니다.';
+  }
+}
+
+// 관광지 데이터 검색 함수
+async function searchAttractions(location: string): Promise<string> {
+  console.log(`관광지 검색 시작: ${location}`);
+  
+  try {
+    // 특정 구/군 검색
+    const { data, error } = await supabase
+      .from('tourist_attraction')
+      .select('관광지명, 소재지도로명주소, 소재지지번주소, 관광지소개, 관리기관명, 관리기관전화번호, 면적, 수용인원수, 주차가능수')
+      .or(`소재지도로명주소.ilike.%${location}%,소재지지번주소.ilike.%${location}%,관광지명.ilike.%${location}%`)
+      .limit(10);
+
+    if (error) {
+      console.error('관광지 검색 오류:', error);
+      return '관광지 정보를 가져오는 중 오류가 발생했습니다.';
+    }
+
+    // 특정 구/군에서 결과가 없으면 상위 지역에서 검색
+    if (!data || data.length === 0) {
+      if (location.includes('마포구') || location.includes('강남구') || location.includes('구')) {
+        const upperLocation = '서울';
+        console.log(`${location}에서 결과 없음, ${upperLocation}로 확장 검색`);
+        
+        const { data: upperData, error: upperError } = await supabase
+          .from('tourist_attraction')
+          .select('관광지명, 소재지도로명주소, 소재지지번주소, 관광지소개, 관리기관명, 관리기관전화번호, 면적, 수용인원수, 주차가능수')
+          .or(`소재지도로명주소.ilike.%${upperLocation}%,소재지지번주소.ilike.%${upperLocation}%,관광지명.ilike.%${upperLocation}%`)
+          .limit(10);
+
+        if (!upperError && upperData && upperData.length > 0) {
+          let attractionResults = `현재 제공된 관광지 데이터에는 ${location} 내 관광지 정보가 없지만, 서울 전역에서 추천할 만한 관광지를 몇 가지 소개해드리겠습니다.\n\n`;
+          
+          upperData.forEach((attraction, index) => {
+            attractionResults += `${index + 1}. ${attraction.관광지명 || '이름 미확인'}\n`;
+            attractionResults += `   주소: ${attraction.소재지도로명주소 || attraction.소재지지번주소 || '주소 미확인'}\n`;
+            if (attraction.관광지소개) {
+              attractionResults += `   소개: ${attraction.관광지소개}\n`;
+            }
+            if (attraction.관리기관명) {
+              attractionResults += `   관리기관: ${attraction.관리기관명}\n`;
+            }
+            if (attraction.관리기관전화번호) {
+              attractionResults += `   문의: ${attraction.관리기관전화번호}\n`;
+            }
+            if (attraction.수용인원수) {
+              attractionResults += `   수용인원: ${attraction.수용인원수}명\n`;
+            }
+            if (attraction.주차가능수) {
+              attractionResults += `   주차: ${attraction.주차가능수}대 가능\n`;
+            }
+            attractionResults += '\n';
+          });
+
+          return attractionResults;
+        }
+      }
+      
+      return `${location} 지역의 관광지 정보를 찾을 수 없습니다.`;
+    }
+
+    let attractionResults = `${location} 지역의 추천 관광지 목록:\n\n`;
+    
+    data.forEach((attraction, index) => {
+      attractionResults += `${index + 1}. ${attraction.관광지명 || '이름 미확인'}\n`;
+      attractionResults += `   주소: ${attraction.소재지도로명주소 || attraction.소재지지번주소 || '주소 미확인'}\n`;
+      if (attraction.관광지소개) {
+        attractionResults += `   소개: ${attraction.관광지소개}\n`;
+      }
+      if (attraction.관리기관명) {
+        attractionResults += `   관리기관: ${attraction.관리기관명}\n`;
+      }
+      if (attraction.관리기관전화번호) {
+        attractionResults += `   문의: ${attraction.관리기관전화번호}\n`;
+      }
+      if (attraction.수용인원수) {
+        attractionResults += `   수용인원: ${attraction.수용인원수}명\n`;
+      }
+      if (attraction.주차가능수) {
+        attractionResults += `   주차: ${attraction.주차가능수}대 가능\n`;
+      }
+      attractionResults += '\n';
+    });
+
+    return attractionResults;
+  } catch (error) {
+    console.error('관광지 검색 중 오류:', error);
+    return '관광지 검색 중 오류가 발생했습니다.';
   }
 }
 
@@ -500,6 +605,20 @@ ${accommodationData}
 ${restaurantData}
 
 사용자의 질문에 대해 위 데이터를 기반으로 친절하고 상세하게 답변해주세요. 맛집 정보를 보기 좋게 정리하여 제공하고, 각 맛집의 특징을 설명해주세요.`;
+      
+    } else if (queryType === 'attraction') {
+      // 관광지 추천 - Supabase 데이터베이스 사용
+      console.log('관광지 추천 요청 처리');
+      
+      const location = extractLocationFromQuery(message) || '전국';
+      const attractionData = await searchAttractions(location);
+      
+      systemPrompt = `당신은 출장지 관광/관광지 추천 전문가입니다. 제공된 관광지 데이터를 바탕으로 사용자에게 적절한 관광지와 볼거리를 추천해주세요.
+
+관광지 데이터:
+${attractionData}
+
+사용자의 질문에 대해 위 데이터를 기반으로 친절하고 상세하게 답변해주세요. 관광지 정보를 보기 좋게 정리하여 제공하고, 각 관광지의 특징과 볼거리를 설명해주세요.`;
       
     } else {
       // 규정 관련 질문 또는 일반 질문 - 사용자 업로드 문서 기반
