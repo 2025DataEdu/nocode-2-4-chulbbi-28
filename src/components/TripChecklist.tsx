@@ -40,7 +40,7 @@ export function TripChecklist({ tripId, tripStatus }: TripChecklistProps) {
   const checklistTemplate: ChecklistCategory[] = [
     {
       id: 'planning',
-      title: '📋 출장 계획 수립',
+      title: '출장 계획 수립',
       description: '출장의 기본 계획을 수립합니다',
       icon: '📋',
       required: true,
@@ -54,7 +54,7 @@ export function TripChecklist({ tripId, tripStatus }: TripChecklistProps) {
     },
     {
       id: 'approval',
-      title: '✅ 승인 및 결재',
+      title: '승인 및 결재',
       description: '출장 승인 및 관련 절차를 완료합니다',
       icon: '✅',
       required: true,
@@ -67,7 +67,7 @@ export function TripChecklist({ tripId, tripStatus }: TripChecklistProps) {
     },
     {
       id: 'booking',
-      title: '🎫 예약 및 준비',
+      title: '예약 및 준비',
       description: '교통편, 숙박 등을 예약합니다',
       icon: '🎫',
       required: true,
@@ -81,7 +81,7 @@ export function TripChecklist({ tripId, tripStatus }: TripChecklistProps) {
     },
     {
       id: 'preparation',
-      title: '🎒 출장 준비',
+      title: '출장 준비',
       description: '출장에 필요한 물품을 준비합니다',
       icon: '🎒',
       required: false,
@@ -95,7 +95,7 @@ export function TripChecklist({ tripId, tripStatus }: TripChecklistProps) {
     },
     {
       id: 'execution',
-      title: '✈️ 출장 실행',
+      title: '출장 실행',
       description: '출장을 진행하고 관련 업무를 수행합니다',
       icon: '✈️',
       required: true,
@@ -109,7 +109,7 @@ export function TripChecklist({ tripId, tripStatus }: TripChecklistProps) {
     },
     {
       id: 'settlement',
-      title: '💰 정산 및 보고',
+      title: '정산 및 보고',
       description: '출장 경비를 정산하고 보고서를 작성합니다',
       icon: '💰',
       required: true,
