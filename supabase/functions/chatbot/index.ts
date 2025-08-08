@@ -511,135 +511,126 @@ ${restaurantData}
       
       if (userId) {
         try {
-          // 1. 메시지에서 키워드 추출
-          const messageKeywords = extractKeywords(message);
-          console.log('Extracted keywords from message:', messageKeywords);
-          
-          // 2. 향상된 벡터 검색 (임베딩 기반)
-          let bestMatches = [];
-          try {
-            const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${openAIApiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: 'text-embedding-3-small',
-                input: message,
-                dimensions: 1536
-              }),
-            });
-            
-            if (embeddingResponse.ok) {
-              const embeddingData = await embeddingResponse.json();
-              const queryEmbedding = embeddingData.data[0].embedding;
-              
-              // 벡터 유사도 검색 - 임계값 0.7 이상만 채택
-              const { data: vectorDocs, error: vectorError } = await supabase
-                .rpc('match_documents', {
-                  query_embedding: queryEmbedding,
-                  match_count: 15
-                });
-                
-              if (!vectorError && vectorDocs) {
-                // 유사도 임계값 적용 및 정렬
-                bestMatches = vectorDocs
-                  .filter(doc => doc.similarity > 0.3)
-                  .sort((a, b) => b.similarity - a.similarity);
-                console.log(`Found ${bestMatches.length} high-similarity matches (>0.3)`);
-              }
-            }
-          } catch (vectorError) {
-            console.log('Vector search failed, using keyword search');
+          // 1. 임베딩 벡터 기반 검색
+          const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openAIApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'text-embedding-3-small',
+              input: message,
+              dimensions: 1536
+            }),
+          });
+
+          let embedding;
+          if (embeddingResponse.ok) {
+            const embeddingData = await embeddingResponse.json();
+            embedding = embeddingData.data[0].embedding;
           }
-          
-          // 3. 키워드 기반 보완 검색
-          let keywordMatches = [];
-          if (messageKeywords.length > 0) {
-            const keywordQueries = [
-              ...messageKeywords.map(keyword => `content.ilike.%${keyword}%`),
-              ...messageKeywords.map(keyword => `doc_title.ilike.%${keyword}%`)
-            ];
-            
-            const { data: keywordDocs, error: keywordError } = await supabase
-              .from('documents')
-              .select('content, doc_title, chunk_index, document_id')
-              .eq('user_id', userId)
-              .or(keywordQueries.join(','))
-              .limit(20);
-              
-            if (!keywordError && keywordDocs) {
-              keywordMatches = keywordDocs.map(doc => ({
-                ...doc,
-                similarity: calculateKeywordSimilarity(doc.content, messageKeywords)
-              })).filter(doc => doc.similarity > 0.3);
-              console.log(`Found ${keywordMatches.length} keyword matches`);
+
+          // 사용자 문서에서 임베딩 벡터 기반 검색
+          const { data: vectorResults, error: vectorError } = await supabase.rpc('match_documents', {
+            query_embedding: embedding,
+            match_count: 10
+          })
+
+          if (vectorError) {
+            console.error('Vector search error:', vectorError)
+          }
+
+          // 키워드 기반 검색으로 보완
+          let keywordResults: any[] = []
+          const extractedKeywords = extractKeywords(message)
+          console.log('Extracted keywords from message:', extractedKeywords)
+
+          if (extractedKeywords.length > 0) {
+            for (const keyword of extractedKeywords) {
+              const { data: kwResults, error: kwError } = await supabase
+                .from('documents')
+                .select('*')
+                .textSearch('content', keyword, { type: 'websearch' })
+                .eq('user_id', userId)
+                .limit(10)
+
+              if (!kwError && kwResults) {
+                keywordResults = keywordResults.concat(kwResults)
+              }
             }
           }
+
+          // 결과 통합 및 중복 제거
+          const allResults = [...(vectorResults || []), ...keywordResults]
+          const uniqueResults = allResults.filter((item, index, self) => 
+            index === self.findIndex(t => t.id === item.id)
+          )
+
+          // 임베딩 유사도 분석
+          const highSimilarityThreshold = 0.3
+          const highSimilarityMatches = (vectorResults || []).filter(doc => doc.similarity > highSimilarityThreshold)
+          console.log(`Found ${highSimilarityMatches.length} high-similarity matches (>${highSimilarityThreshold})`)
+
+          if (vectorResults && vectorResults.length > 0) {
+            const topSimilarities = vectorResults.slice(0, 3).map(doc => doc.similarity?.toFixed(3)).join(', ')
+            console.log('Top similarities:', topSimilarities)
+          }
+
+          // 키워드 매칭 개수
+          const keywordMatchCount = keywordResults.length
+          console.log(`Found ${keywordMatchCount} keyword matches`)
+
+          // *** 핵심 개선: 보다 관대한 관련성 판단 ***
+          // 1. 임베딩 유사도가 낮더라도 키워드 매칭이 있으면 관련성 있다고 판단
+          // 2. 문서가 존재하고 키워드나 유사도 중 하나라도 있으면 사용자 문서 우선
+          const hasAnyDocuments = uniqueResults.length > 0
+          const hasKeywordMatches = keywordMatchCount > 0
+          const hasSimilarityMatches = highSimilarityMatches.length > 0
           
-          // 4. 결과 통합 및 중복 제거
-          const allMatches = new Map();
+          // 관련성 재평가: 더 관대한 기준 적용
+          hasRelevantDocuments = hasAnyDocuments && (hasKeywordMatches || hasSimilarityMatches)
           
-          bestMatches.forEach(doc => {
-            const key = `${doc.doc_title}-${doc.chunk_index}`;
-            allMatches.set(key, { ...doc, source: 'vector' });
-          });
-          
-          keywordMatches.forEach(doc => {
-            const key = `${doc.doc_title}-${doc.chunk_index}`;
-            if (!allMatches.has(key)) {
-              allMatches.set(key, { ...doc, source: 'keyword' });
-            }
-          });
-          
-          // 5. 최종 정렬 및 선택
-          const finalMatches = Array.from(allMatches.values())
-            .sort((a, b) => {
-              if (a.similarity > 0.8 || b.similarity > 0.8) {
-                return b.similarity - a.similarity;
-              }
-              const aHasImportant = hasImportantKeywords(a.content);
-              const bHasImportant = hasImportantKeywords(b.content);
-              if (aHasImportant !== bHasImportant) {
-                return bHasImportant ? 1 : -1;
-              }
-              return b.similarity - a.similarity;
-            })
-            .slice(0, 10);
-          
-          // 6. 관련성 높은 문서가 있는지 판단
-          hasRelevantDocuments = finalMatches.some(doc => 
-            doc.similarity > 0.5 || hasImportantKeywords(doc.content)
-          );
-          
-          if (finalMatches.length > 0) {
-            console.log(`Using ${finalMatches.length} documents for context (relevant: ${hasRelevantDocuments})`);
-            console.log('Top similarities:', finalMatches.slice(0, 3).map(d => d.similarity?.toFixed(3)).join(', '));
-            
-            documentContext = finalMatches.map(doc => {
-              const isHighRelevance = doc.similarity > 0.8;
-              const isImportant = hasImportantKeywords(doc.content);
-              const formattedContent = `[${doc.doc_title}${doc.chunk_index ? ` - 섹션 ${doc.chunk_index}` : ''}] ${doc.content}`;
+          console.log(`Document availability: any=${hasAnyDocuments}, keywords=${hasKeywordMatches}, similarity=${hasSimilarityMatches}`)
+          console.log(`Final relevance decision: ${hasRelevantDocuments}`)
+
+          if (hasRelevantDocuments) {
+            // 키워드 매칭 결과와 유사도 높은 결과를 우선하여 최대 10개 선택
+            const prioritizedResults = [
+              ...keywordResults.slice(0, 5),  // 키워드 매칭 우선
+              ...highSimilarityMatches.slice(0, 5)  // 유사도 높은 것
+            ].filter((item, index, self) => 
+              index === self.findIndex(t => t.id === item.id)
+            ).slice(0, 10)
+
+            const documentsToUse = prioritizedResults.length > 0 ? prioritizedResults : uniqueResults.slice(0, 10)
+            console.log(`Using ${documentsToUse.length} documents for context (relevant: ${hasRelevantDocuments})`)
+
+            documentContext = documentsToUse.map(doc => {
+              const similarity = doc.similarity || 0
+              const isHighRelevance = similarity > 0.7
+              const isImportant = hasImportantKeywords(doc.content)
+              const formattedContent = `[${doc.doc_title}${doc.chunk_index ? ` - 섹션 ${doc.chunk_index}` : ''}] ${doc.content}`
               
               if (isHighRelevance || isImportant) {
-                return `**[핵심규정 - 유사도: ${(doc.similarity * 100).toFixed(1)}%]** ${formattedContent}`;
+                return `**[핵심규정 - 유사도: ${(similarity * 100).toFixed(1)}%]** ${formattedContent}`
               } else {
-                return `**[참고자료 - 유사도: ${(doc.similarity * 100).toFixed(1)}%]** ${formattedContent}`;
+                return `**[참고자료 - 유사도: ${(similarity * 100).toFixed(1)}%]** ${formattedContent}`
               }
-            }).join('\n\n');
+            }).join('\n\n')
           } else {
-            console.log('No relevant documents found');
+            console.log('No relevant documents found')
           }
         } catch (error) {
           console.error('Error in document search:', error);
         }
       }
 
-      // 웹 검색 수행 (업로드된 문서에 관련 내용이 부족한 경우)
+      // *** 핵심 개선: 사용자 문서 우선 원칙 강화 ***
+      // 웹 검색은 오직 사용자 문서에 전혀 관련성이 없는 경우만 수행
       let webSearchResults = '';
       if (!hasRelevantDocuments && userProfile) {
-        console.log('Performing web search due to insufficient document matches');
+        console.log('웹 검색 시작:', message, ', 사용자 유형:', userProfile.user_type || '기타');
         webSearchResults = await performWebSearch(message, userProfile.user_type || '기타');
       }
 
