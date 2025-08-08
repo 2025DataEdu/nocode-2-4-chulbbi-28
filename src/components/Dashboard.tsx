@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TripCard } from "./TripCard";
-import { Plus, BarChart3, Calendar, MapPin, Building, Utensils, Camera } from "lucide-react";
+import { Plus, BarChart3, Calendar, MapPin, Building, Utensils, Camera, UploadCloud } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
