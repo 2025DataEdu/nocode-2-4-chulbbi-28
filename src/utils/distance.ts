@@ -13,6 +13,7 @@ export interface LocationInfo {
 export interface DistanceResult {
   distance: string;
   duration: string;
+  timesByTransport: Record<string, string>;
   type: 'internal' | 'external';
   recommendation?: {
     primary: string;
@@ -174,6 +175,13 @@ export function calculateDistance(departure: string, destination: string): Dista
     return {
       distance: `${Math.round(baseDistance)}km`,
       duration: `${duration}분`,
+      timesByTransport: {
+        '자차/택시': `${duration}분`,
+        '고속버스': `${Math.round(duration * 1.1)}분`,
+        'KTX/기차': `${Math.round(duration * 0.7)}분`,
+        '항공': `${Math.round(duration * 0.3)}분`,
+        '지하철/버스': `${Math.round(duration * 1.5)}분`
+      },
       type: 'internal'
     };
   }
@@ -189,10 +197,20 @@ export function calculateDistance(departure: string, destination: string): Dista
   const durationText = hours > 0 
     ? `${hours}시간${minutes > 0 ? ` ${minutes}분` : ''}`
     : `${Math.round(distanceKm / 80 * 60)}분`;
-  
+
+  // 교통수단별 시간 계산
+  const timesByTransport = {
+    '자차/택시': durationText,
+    '고속버스': `${Math.round(distanceKm / 70 * 60)}분`,
+    'KTX/기차': `${Math.round(distanceKm / 300 * 60)}분`,
+    '항공': `${Math.round(distanceKm / 700 * 60)}분`,
+    '지하철/버스': `${Math.round(distanceKm / 40 * 60)}분`
+  };
+
   return {
     distance: `${distanceKm}km`,
     duration: durationText,
+    timesByTransport,
     type: 'external'
   };
 }
@@ -293,51 +311,32 @@ function recommendTransportation(distanceKm: number): {
 }
 
 /**
- * 예상 소요시간 계산
+ * 교통수단별 예상 소요시간 계산
  */
-function calculateEstimatedTime(distanceKm: number, transport?: string): string {
-  let speedKmh: number;
-  
-  switch (transport) {
-    case 'airplane':
-    case '항공':
-      speedKmh = 700; // 공항 이동 시간 포함하여 실제보다 낮게 설정
-      break;
-    case 'train':
-    case 'KTX':
-      speedKmh = 300;
-      break;
-    case 'subway':
-    case '지하철':
-      speedKmh = 40;
-      break;
-    case 'bus':
-    case '버스':
-    case '고속버스':
-      speedKmh = 70;
-      break;
-    case 'official_car':
-    case 'taxi':
-    case 'personal_car':
-    case '자차':
-      speedKmh = 80;
-      break;
-    default:
-      // 거리 기반 기본 속도
-      if (distanceKm <= 50) speedKmh = 40;
-      else if (distanceKm <= 200) speedKmh = 80;
-      else speedKmh = 120;
-  }
-  
-  const hoursFloat = distanceKm / speedKmh;
-  const hours = Math.floor(hoursFloat);
-  const minutes = Math.round((hoursFloat - hours) * 60);
-  
-  if (hours > 0) {
-    return minutes > 0 ? `${hours}시간 ${minutes}분` : `${hours}시간`;
-  } else {
-    return `${Math.max(1, minutes)}분`;
-  }
+function calculateTimeByTransport(distanceKm: number): Record<string, string> {
+  const transportSpeeds = {
+    '자차/택시': 80,
+    '고속버스': 70,
+    'KTX/기차': 300,
+    '항공': 700, // 공항 이동시간 포함하여 실제보다 낮게 설정
+    '지하철/버스': 40
+  };
+
+  const results: Record<string, string> = {};
+
+  Object.entries(transportSpeeds).forEach(([transport, speed]) => {
+    const hoursFloat = distanceKm / speed;
+    const hours = Math.floor(hoursFloat);
+    const minutes = Math.round((hoursFloat - hours) * 60);
+    
+    if (hours > 0) {
+      results[transport] = minutes > 0 ? `${hours}시간 ${minutes}분` : `${hours}시간`;
+    } else {
+      results[transport] = `${Math.max(1, minutes)}분`;
+    }
+  });
+
+  return results;
 }
 
 /**
@@ -369,8 +368,15 @@ export async function calculateDistanceByAddress(
     // 교통수단 추천
     const recommendation = recommendTransportation(distanceKm);
     
-    // 예상 소요시간 계산
-    const estimatedTime = calculateEstimatedTime(distanceKm);
+    // 교통수단별 예상시간 계산
+    const timesByTransport = calculateTimeByTransport(distanceKm);
+    
+    // 기본 예상 소요시간 (추천 교통수단 기준)
+    const primaryTransport = recommendation.primary.includes('대중교통') ? '지하철/버스' :
+                           recommendation.primary.includes('자차') ? '자차/택시' :
+                           recommendation.primary.includes('KTX') ? 'KTX/기차' :
+                           recommendation.primary.includes('항공') ? '항공' : '자차/택시';
+    const estimatedTime = timesByTransport[primaryTransport] || timesByTransport['자차/택시'];
 
     // 지역 기반 출장 구분
     const depRegion = normalizeRegion(departureAddress);
@@ -382,6 +388,7 @@ export async function calculateDistanceByAddress(
     return {
       distance: `${distanceKm}km`,
       duration: estimatedTime,
+      timesByTransport,
       type,
       recommendation
     };

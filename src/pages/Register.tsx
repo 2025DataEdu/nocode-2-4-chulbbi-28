@@ -421,10 +421,24 @@ export default function Register() {
                         <Car className="w-4 h-4 text-accent" />
                         <div className="space-y-1">
                           <p><strong>직선거리:</strong> {travelInfo.distance}</p>
-                          <p><strong>예상시간:</strong> {travelInfo.duration}</p>
                           <p><strong>출장구분:</strong> {travelInfo.type === 'internal' ? '관내 출장' : '관외 출장'}</p>
                         </div>
                       </div>
+                      
+                      {/* 교통수단별 예상시간 */}
+                      {travelInfo.timesByTransport && (
+                        <div className="border-t pt-3">
+                          <p className="font-medium text-accent mb-2">🕐 교통수단별 예상시간</p>
+                          <div className="grid grid-cols-1 gap-1 text-xs">
+                            {Object.entries(travelInfo.timesByTransport).map(([transport, time]) => (
+                              <div key={transport} className="flex justify-between">
+                                <span className="text-muted-foreground">{transport}:</span>
+                                <span className="font-medium">{time}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       
                       {addressCalculation?.recommendation && (
                         <div className="border-t pt-3">
