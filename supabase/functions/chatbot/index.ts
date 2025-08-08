@@ -508,18 +508,14 @@ async function getAccommodationRecommendations(message: string) {
       const encodedSearchKeyword = encodeURIComponent(searchKeyword);
       
       result += `**${index + 1}. ${hotelName}**\n`;
-      result += `- 업태: ${acc.위생업태명 || '정보없음'}\n`;
-      result += `- 주소: ${address || '주소정보없음'}\n`;
+      result += `구분: ${acc.위생업태명 || '정보없음'}\n`;
+      result += `위치: ${address || '주소정보없음'}\n`;
       if (acc.소재지전화) {
-        result += `- 전화: ${acc.소재지전화}\n`;
+        result += `전화: ${acc.소재지전화}\n`;
       }
       
-      // 예약 및 검색 링크 (정확성 향상)
-      result += `- **예약 및 검색:**\n`;
-      result += `  🔍 [네이버에서 검색](https://search.naver.com/search.naver?query=${encodedSearchKeyword})\n`;
-      result += `  🏨 [여기어때](https://www.goodchoice.kr/product/search?keyword=${encodedHotelName}) | [야놀자](https://www.yanolja.com/search/${encodedHotelName}) | [부킹닷컴](https://www.booking.com/searchresults.html?ss=${encodedSearchKeyword})\n`;
-      result += `  📍 [구글맵 검색](https://www.google.com/maps/search/${encodedSearchKeyword})\n`;
-      result += `\n`;
+      // 예약 및 검색 링크 바로 제공
+      result += `🔍 [네이버 검색](https://search.naver.com/search.naver?query=${encodedSearchKeyword}) | 🏨 [여기어때](https://www.goodchoice.kr/product/search?keyword=${encodedHotelName}) | [야놀자](https://www.yanolja.com/search/${encodedHotelName}) | [부킹닷컴](https://www.booking.com/searchresults.html?ss=${encodedSearchKeyword}) | 📍 [구글맵](https://www.google.com/maps/search/${encodedSearchKeyword})\n\n`;
     });
 
     if (moreAccommodations.length > 0) {
