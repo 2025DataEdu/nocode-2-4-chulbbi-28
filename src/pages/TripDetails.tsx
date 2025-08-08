@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TripDetailsMap } from '@/components/TripDetailsMap'
 
 import { TripChecklist } from '@/components/TripChecklist'
-import { ArrowLeft, Calendar, MapPin, Clock, Users, Edit3, Share2, Save, X } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, Clock, Users, Edit3, Share2, Save, X, Copy, Check } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
@@ -42,6 +42,7 @@ export default function TripDetails() {
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editLoading, setEditLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [editForm, setEditForm] = useState({
     destination: '',
     start_date: '',
@@ -301,6 +302,30 @@ export default function TripDetails() {
     }
   }
 
+  const handleShare = async () => {
+    try {
+      const currentUrl = window.location.href
+      await navigator.clipboard.writeText(currentUrl)
+      setCopied(true)
+      toast({
+        title: "링크가 복사되었습니다",
+        description: "출장 정보 링크를 클립보드에 복사했습니다."
+      })
+      
+      // 2초 후 복사 상태 리셋
+      setTimeout(() => {
+        setCopied(false)
+      }, 2000)
+    } catch (error) {
+      console.error('Failed to copy link:', error)
+      toast({
+        title: "복사 실패",
+        description: "링크 복사 중 오류가 발생했습니다.",
+        variant: "destructive"
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -351,9 +376,18 @@ export default function TripDetails() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Share2 className="h-4 w-4 mr-2" />
-            공유
+          <Button variant="outline" size="sm" onClick={handleShare}>
+            {copied ? (
+              <>
+                <Check className="h-4 w-4 mr-2 text-success" />
+                복사됨
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4 mr-2" />
+                링크 복사
+              </>
+            )}
           </Button>
           <Button variant="outline" size="sm" onClick={openEditDialog}>
             <Edit3 className="h-4 w-4 mr-2" />
