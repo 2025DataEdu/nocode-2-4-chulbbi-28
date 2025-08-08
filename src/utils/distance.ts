@@ -1,3 +1,5 @@
+import { GeocodingService } from "@/services/GeocodingService"
+
 /**
  * 거리 계산 유틸리티
  */

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { TopNavigation } from "@/components/TopNavigation"
 import { Calendar, MapPin, Car, Building, ArrowRight, Save, X } from "lucide-react"
 import { validateTripForm, safeParseNumber } from "@/utils/validation"
-import { calculateDistance as calculateDistanceUtil, extractDistanceKm } from "@/utils/distance"
+import { calculateDistance as calculateDistanceUtil, calculateDistanceByAddress, extractDistanceKm } from "@/utils/distance"
 
 const locations = [
   { value: 'seoul-jung', label: '서울특별시 중구', region: 'seoul' },
@@ -66,13 +66,26 @@ export default function Register() {
     { id: 4, title: '확인', emoji: '✅' }
   ]
 
-  const calculateDistance = (departure: string, destination: string) => {
-    return calculateDistanceUtil(departure, destination)
-  }
+  const [travelInfo, setTravelInfo] = useState<ReturnType<typeof calculateDistanceUtil>>(null)
 
-  const travelInfo = formData.departure && formData.destination 
-    ? calculateDistance(formData.departure, formData.destination) 
-    : null
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      if (!formData.departure || !formData.destination) {
+        if (!cancelled) setTravelInfo(null)
+        return
+      }
+      const byPreset = calculateDistanceUtil(formData.departure, formData.destination)
+      if (byPreset) {
+        if (!cancelled) setTravelInfo(byPreset)
+        return
+      }
+      const byAddress = await calculateDistanceByAddress(formData.departure, formData.destination)
+      if (!cancelled) setTravelInfo(byAddress)
+    }
+    run()
+    return () => { cancelled = true }
+  }, [formData.departure, formData.destination])
 
   const handleNext = () => {
     if (currentStep === 1) {
@@ -451,8 +464,8 @@ export default function Register() {
                       장소 정보
                     </h4>
                     <div className="space-y-2 text-sm">
-                      <p><strong>출발지:</strong> {locations.find(loc => loc.value === formData.departure)?.label || '미선택'}</p>
-                      <p><strong>출장지:</strong> {locations.find(loc => loc.value === formData.destination)?.label || '미선택'}</p>
+                      <p><strong>출발지:</strong> {locations.find(loc => loc.value === formData.departure)?.label || formData.departure || '미선택'}</p>
+                      <p><strong>출장지:</strong> {locations.find(loc => loc.value === formData.destination)?.label || formData.destination || '미선택'}</p>
                       <p><strong>출장 목적:</strong> {formData.purpose || '미입력'}</p>
                       <p><strong>출장 유형:</strong> {formData.tripType === 'internal' ? '관내' : formData.tripType === 'external' ? '관외' : '미선택'}</p>
                       {travelInfo && (
