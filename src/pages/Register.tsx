@@ -67,25 +67,114 @@ export default function Register() {
   ]
 
   const [travelInfo, setTravelInfo] = useState<ReturnType<typeof calculateDistanceUtil>>(null)
+  const [travelEstimation, setTravelEstimation] = useState<{
+    straightLineKm: number;
+    estimatedTravelKm: number;
+    estimatedHours: number;
+    recommendedTransport: string;
+    tips: string[];
+    depLabel: string;
+    destLabel: string;
+    isDomestic: boolean;
+  } | null>(null)
 
   useEffect(() => {
     let cancelled = false
     const run = async () => {
       if (!formData.departure || !formData.destination) {
-        if (!cancelled) setTravelInfo(null)
+        if (!cancelled) {
+          setTravelInfo(null)
+          setTravelEstimation(null)
+        }
         return
       }
-      const byPreset = calculateDistanceUtil(formData.departure, formData.destination)
-      if (byPreset) {
-        if (!cancelled) setTravelInfo(byPreset)
+
+      const depLabel = locations.find(l => l.value === formData.departure)?.label || formData.departure
+      const destLabel = locations.find(l => l.value === formData.destination)?.label || formData.destination
+
+      // 1) 프리셋 및 주소 기반 모두 계산 (주소 기반이 있으면 우선 사용)
+      const preset = calculateDistanceUtil(formData.departure, formData.destination)
+      const byAddress = await calculateDistanceByAddress(depLabel, destLabel)
+      const chosen = byAddress || preset
+      if (!cancelled) setTravelInfo(chosen)
+
+      // 2) 직선 거리(km)
+      const straightLineKm = byAddress
+        ? extractDistanceKm(byAddress.distance)
+        : (preset ? extractDistanceKm(preset.distance) : 0)
+
+      if (straightLineKm <= 0) {
+        if (!cancelled) setTravelEstimation(null)
         return
       }
-      const byAddress = await calculateDistanceByAddress(formData.departure, formData.destination)
-      if (!cancelled) setTravelInfo(byAddress)
+
+      // 국내/국제 판별(간단 휴리스틱)
+      const domesticRegex = /(한국|대한민국|서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/
+      const isDomestic = domesticRegex.test(depLabel + destLabel)
+
+      // 3) 예상 이동 거리(km): 국내 1.25배, 국제 1.10배 (구글/공공데이터 일반적 경로 가중치 가정)
+      const factor = isDomestic ? 1.25 : 1.1
+      const estimatedTravelKm = Math.max(straightLineKm, Math.round(straightLineKm * factor))
+
+      // 4) 거리 기반 추천 교통수단
+      const recommend = (dist: number) => {
+        if (dist < 200) return { text: '자동차 / 고속버스 / KTX·ITX', primary: 'car' as const }
+        if (dist < 500) return { text: 'KTX·ITX / 항공', primary: 'ktx' as const }
+        return { text: '항공', primary: 'airplane' as const }
+      }
+      const rec = recommend(estimatedTravelKm)
+
+      const getSpeed = (transport: string | undefined, primary: 'car' | 'ktx' | 'airplane') => {
+        switch (transport) {
+          case 'airplane':
+            return 700
+          case 'train':
+            return 300
+          case 'subway':
+            return 60
+          case 'official_car':
+          case 'taxi':
+          case 'personal_car':
+            return 80
+          case 'other':
+            return 80
+          default:
+            return primary === 'airplane' ? 700 : primary === 'ktx' ? 300 : 80
+        }
+      }
+
+      const speed = getSpeed(formData.transport, rec.primary)
+      const estimatedHours = Math.max(0.1, Number((estimatedTravelKm / speed).toFixed(1)))
+
+      // 5) 부가 팁 1~2줄
+      const tips: string[] = []
+      if (rec.primary === 'airplane' || estimatedTravelKm >= 500) {
+        tips.push('항공 이용 시 기상 영향과 공항 이동/보안검색 시간을 고려해 여유 있게 출발하세요.')
+        tips.push('예산 절감을 위해 LCC/얼리버드 특가 또는 KTX 특가를 확인해보세요.')
+      } else if (rec.primary === 'ktx') {
+        tips.push('KTX/ITX는 출발 2~3일 전 예매 시 좌석 선택이 수월합니다.')
+        tips.push('우천/폭설 시 지연 가능성을 고려해 일정에 여유를 두세요.')
+      } else {
+        tips.push('출퇴근 시간대(07~09시, 17~20시) 교통 혼잡을 피하면 이동 시간이 단축됩니다.')
+        tips.push('톨비·주차비를 예산에 반영하세요.')
+      }
+
+      if (!cancelled) {
+        setTravelEstimation({
+          straightLineKm,
+          estimatedTravelKm,
+          estimatedHours,
+          recommendedTransport: rec.text,
+          tips,
+          depLabel,
+          destLabel,
+          isDomestic
+        })
+      }
     }
     run()
     return () => { cancelled = true }
-  }, [formData.departure, formData.destination])
+  }, [formData.departure, formData.destination, formData.transport])
 
   const handleNext = () => {
     if (currentStep === 1) {
@@ -383,6 +472,24 @@ export default function Register() {
                         <p><strong>예상 시간:</strong> {travelInfo.duration}</p>
                         <p><strong>출장 구분:</strong> {travelInfo.type === 'internal' ? '관내 출장' : '관외 출장'}</p>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {travelEstimation && (
+                <Card className="border-primary/20">
+                  <CardContent className="p-4">
+                    <div className="text-sm whitespace-pre-line">
+                      <p className="font-semibold">[{travelEstimation.depLabel}] → [{travelEstimation.destLabel}]</p>
+                      <p>거리: {travelEstimation.straightLineKm} km (직선) / {travelEstimation.estimatedTravelKm} km (예상)</p>
+                      <p>예상 소요 시간: {travelEstimation.estimatedHours} 시간</p>
+                      <p>추천 교통수단: {travelEstimation.recommendedTransport}</p>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-3 space-y-1">
+                      {travelEstimation.tips.map((tip, idx) => (
+                        <p key={idx}>• {tip}</p>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
