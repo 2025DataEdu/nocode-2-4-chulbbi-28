@@ -223,30 +223,82 @@ function hasImportantKeywords(content: string): boolean {
   return importantKeywords.some(keyword => lowercaseContent.includes(keyword));
 }
 
-// 웹 검색 함수
-async function performTargetedWebSearch(query: string, userProfile: any): Promise<string> {
-  console.log(`웹 검색 시작: ${query}, 사용자 유형: ${userProfile?.user_type}`);
+// 웹 검색 함수 (OpenAI 웹 검색 사용)
+async function performWebSearch(query: string, userType: string): Promise<string> {
+  console.log(`OpenAI 웹 검색 시작: ${query}, 사용자 유형: ${userType}`);
   
   try {
     let searchQuery = query;
-    let targetSite = '';
     
-    // 사용자 유형에 따른 사이트 결정
-    if (userProfile?.user_type === '공무원') {
-      targetSite = 'site:law.go.kr';
-      searchQuery = `${query} 공무원 출장 여비 규정 ${targetSite}`;
-    } else if (userProfile?.user_type === '공공기관') {
-      targetSite = 'site:alio.go.kr';
-      searchQuery = `${query} 공공기관 출장 여비 규정 ${targetSite}`;
+    // 사용자 유형에 따른 검색 쿼리 조정
+    if (userType === '공무원') {
+      searchQuery = `${query} 공무원 출장 여비 규정 site:law.go.kr`;
+    } else if (userType === '공공기관') {
+      searchQuery = `${query} 공공기관 출장 여비 규정 site:alio.go.kr`;
     } else {
-      // 기타 사용자의 경우 일반 검색
       searchQuery = `${query} 출장 여비 규정`;
     }
     
-    console.log(`검색 쿼리: ${searchQuery}`);
-    return '웹 검색 기능이 현재 준비 중입니다.';
+    console.log(`웹 검색 쿼리: ${searchQuery}`);
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: `당신은 출장 규정 전문 검색 도우미입니다. 제공된 검색 결과를 바탕으로 정확하고 유용한 정보를 요약해서 제공해주세요. 출처를 명확히 밝혀주세요.`
+          },
+          {
+            role: 'user',
+            content: searchQuery
+          }
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "web_search",
+              description: "Search the web for information",
+              parameters: {
+                type: "object",
+                properties: {
+                  query: {
+                    type: "string",
+                    description: "The search query"
+                  }
+                },
+                required: ["query"]
+              }
+            }
+          }
+        ],
+        tool_choice: "auto",
+        temperature: 0.3,
+        max_tokens: 1000,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`OpenAI 웹 검색 API 오류: ${response.status}`);
+      return '웹 검색을 수행할 수 없습니다.';
+    }
+
+    const data = await response.json();
+    console.log('OpenAI 웹 검색 결과:', JSON.stringify(data, null, 2));
+    
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return data.choices[0].message.content || '검색 결과를 찾을 수 없습니다.';
+    }
+
+    return '검색 결과를 처리할 수 없습니다.';
   } catch (error) {
-    console.error('웹 검색 중 오류:', error);
+    console.error('OpenAI 웹 검색 중 오류:', error);
     return '웹 검색 중 오류가 발생했습니다.';
   }
 }
@@ -499,7 +551,7 @@ ${restaurantData}
       let webSearchResults = '';
       if (!hasRelevantDocuments && userProfile) {
         console.log('Performing web search due to insufficient document matches');
-        webSearchResults = await performTargetedWebSearch(message, userProfile);
+        webSearchResults = await performWebSearch(message, userProfile.user_type || '기타');
       }
 
       // 시스템 프롬프트 설정
