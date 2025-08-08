@@ -34,61 +34,114 @@ serve(async (req) => {
       );
     }
 
-    const { documents, userId } = await req.json();
+    const requestBody = await req.json();
+    console.log('Received request body:', requestBody);
 
-    if (!documents || !Array.isArray(documents)) {
-      return new Response(
-        JSON.stringify({ error: 'Documents array is required' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    const { title, documentId, chunks, documents, userId } = requestBody;
+
+    // 두 가지 요청 형식 지원
+    let processedDocuments = [];
+    let targetUserId = userId;
+
+    if (title && documentId && chunks) {
+      // 새로운 형식: { title, documentId, chunks }
+      if (!targetUserId) {
+        // Authorization 헤더에서 사용자 ID 추출
+        const authHeader = req.headers.get('authorization');
+        if (authHeader) {
+          try {
+            const token = authHeader.replace('Bearer ', '');
+            // JWT 토큰에서 사용자 ID 추출 (간단한 방법)
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            targetUserId = payload.sub;
+          } catch (e) {
+            console.error('Failed to extract user ID from token:', e);
+          }
         }
-      );
-    }
-
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'User ID is required' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    console.log(`Processing ${documents.length} documents for user ${userId}`);
-
-    const processedDocuments = [];
-    
-    for (const doc of documents) {
-      const { content, title, source_path, document_id } = doc;
-      
-      if (!content || !title) {
-        console.warn('Skipping document with missing content or title');
-        continue;
       }
 
-      // 문서를 청크로 분할 (각 청크는 최대 1000자)
-      const chunks = splitIntoChunks(content, 1000);
-      
+      if (!targetUserId) {
+        return new Response(
+          JSON.stringify({ error: 'User authentication required' }),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+
+      console.log(`Processing ${chunks.length} chunks for document: ${title}`);
+
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         
-        // 간단한 임베딩 생성 (실제 프로젝트에서는 OpenAI 등의 API 사용)
-        const embedding = generateSimpleEmbedding(chunk);
+        // 임베딩 생성
+        const embedding = generateSimpleEmbedding(chunk.content);
         
         const documentData = {
-          user_id: userId,
-          document_id: document_id || crypto.randomUUID(),
-          content: chunk,
+          user_id: targetUserId,
+          document_id: documentId,
+          content: chunk.content,
           doc_title: title,
-          source_path: source_path || '',
-          chunk_index: i,
-          embedding: `[${embedding.join(',')}]` // PostgreSQL vector 형식
+          source_path: title,
+          chunk_index: chunk.chunk_index,
+          embedding: `[${embedding.join(',')}]`
         };
         
         processedDocuments.push(documentData);
       }
+    } else if (documents && Array.isArray(documents)) {
+      // 기존 형식: { documents, userId }
+      if (!targetUserId) {
+        return new Response(
+          JSON.stringify({ error: 'User ID is required' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+
+      console.log(`Processing ${documents.length} documents for user ${targetUserId}`);
+
+      for (const doc of documents) {
+        const { content, title: docTitle, source_path, document_id } = doc;
+        
+        if (!content || !docTitle) {
+          console.warn('Skipping document with missing content or title');
+          continue;
+        }
+
+        const documentChunks = splitIntoChunks(content, 1000);
+        
+        for (let i = 0; i < documentChunks.length; i++) {
+          const chunk = documentChunks[i];
+          
+          const embedding = generateSimpleEmbedding(chunk);
+          
+          const documentData = {
+            user_id: targetUserId,
+            document_id: document_id || crypto.randomUUID(),
+            content: chunk,
+            doc_title: docTitle,
+            source_path: source_path || '',
+            chunk_index: i,
+            embedding: `[${embedding.join(',')}]`
+          };
+          
+          processedDocuments.push(documentData);
+        }
+      }
+    } else {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request format. Expected either { title, documentId, chunks } or { documents, userId }' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     // 데이터베이스에 저장
@@ -115,7 +168,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Successfully processed ${documents.length} documents into ${processedDocuments.length} chunks`,
+        message: `Successfully processed ${processedDocuments.length} chunks`,
         chunks_created: processedDocuments.length
       }),
       { 
