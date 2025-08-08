@@ -311,32 +311,80 @@ function recommendTransportation(distanceKm: number): {
 }
 
 /**
- * 교통수단별 예상 소요시간 계산
+ * 교통수단별 예상 소요시간 계산 (더 정확한 버전)
  */
 function calculateTimeByTransport(distanceKm: number): Record<string, string> {
-  const transportSpeeds = {
-    '자차/택시': 80,
-    '고속버스': 70,
-    'KTX/기차': 300,
-    '항공': 700, // 공항 이동시간 포함하여 실제보다 낮게 설정
-    '지하철/버스': 40
-  };
-
   const results: Record<string, string> = {};
 
-  Object.entries(transportSpeeds).forEach(([transport, speed]) => {
-    const hoursFloat = distanceKm / speed;
-    const hours = Math.floor(hoursFloat);
-    const minutes = Math.round((hoursFloat - hours) * 60);
-    
-    if (hours > 0) {
-      results[transport] = minutes > 0 ? `${hours}시간 ${minutes}분` : `${hours}시간`;
-    } else {
-      results[transport] = `${Math.max(1, minutes)}분`;
-    }
-  });
+  // 자차/택시 - 거리별 평균 속도 적용
+  let carSpeed = 60; // 기본 60km/h
+  if (distanceKm < 30) carSpeed = 35; // 시내 구간
+  else if (distanceKm < 100) carSpeed = 55; // 근거리
+  else carSpeed = 75; // 고속도로 구간
+  
+  const carTime = distanceKm / carSpeed;
+  results['자차/택시'] = formatDuration(carTime);
+
+  // 고속버스 - 시외버스터미널 접근 시간 포함
+  if (distanceKm > 50) {
+    const busTime = distanceKm / 65 + 0.5; // 65km/h + 30분 추가
+    results['고속버스'] = formatDuration(busTime);
+  } else {
+    results['고속버스'] = formatDuration(distanceKm / 40); // 시내버스 속도
+  }
+
+  // KTX/기차 - 역 접근 및 대기시간 포함
+  if (distanceKm > 100) {
+    // 장거리: KTX 평균속도 180km/h + 1시간 추가 (역 이동, 대기)
+    const ktxTime = distanceKm / 180 + 1;
+    results['KTX/기차'] = formatDuration(ktxTime);
+  } else if (distanceKm > 30) {
+    // 중거리: 일반열차 평균속도 80km/h + 30분 추가
+    const trainTime = distanceKm / 80 + 0.5;
+    results['KTX/기차'] = formatDuration(trainTime);
+  } else {
+    // 단거리: 지하철 속도
+    results['KTX/기차'] = formatDuration(distanceKm / 35);
+  }
+
+  // 항공 - 거리가 300km 이상일 때만 실용적
+  if (distanceKm > 300) {
+    // 비행속도 500km/h + 2.5시간 추가 (공항이동, 체크인, 대기, 수하물)
+    const flightTime = distanceKm / 500 + 2.5;
+    results['항공'] = formatDuration(flightTime);
+  } else {
+    // 단거리는 항공이 비효율적
+    results['항공'] = '비효율적';
+  }
+
+  // 지하철/버스 - 시내 대중교통
+  if (distanceKm < 100) {
+    // 도시 내 대중교통: 평균 25km/h (신호대기, 정차 포함)
+    const publicTime = distanceKm / 25;
+    results['지하철/버스'] = formatDuration(publicTime);
+  } else {
+    // 장거리는 시외버스와 동일
+    const longBusTime = distanceKm / 50;
+    results['지하철/버스'] = formatDuration(longBusTime);
+  }
 
   return results;
+}
+
+/**
+ * 시간(시간 단위)을 "N시간 M분" 형식으로 변환
+ */
+function formatDuration(hours: number): string {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  
+  if (h > 0 && m > 0) {
+    return `${h}시간 ${m}분`;
+  } else if (h > 0) {
+    return `${h}시간`;
+  } else {
+    return `${Math.max(5, m)}분`; // 최소 5분
+  }
 }
 
 /**
