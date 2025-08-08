@@ -701,18 +701,23 @@ ${attractionData}
           const keywordMatchCount = keywordResults.length
           console.log(`Found ${keywordMatchCount} keyword matches`)
 
-          // *** 핵심 개선: 더욱 관대한 관련성 판단 ***
-          // 사용자 문서가 있으면 우선적으로 활용 (키워드나 유사도에 관계없이)
+          // *** 핵심 개선: 10% 유사도 기준 적용 ***
+          // 최고 유사도가 10% (0.1) 이상인 경우에만 사용자 문서 우선 활용
           const hasAnyDocuments = uniqueResults.length > 0
           const hasKeywordMatches = keywordMatchCount > 0
           const hasSimilarityMatches = highSimilarityMatches.length > 0
           
-          // 관련성 재평가: 문서가 존재하면 사용자 문서를 우선 활용
-          // 이는 RAG 원칙 [1]에 따라 웹 검색보다 사용자 문서를 우선하기 위함
-          hasRelevantDocuments = hasAnyDocuments
+          // 최고 유사도 점수 확인 (10% 이상인지 판단)
+          const maxSimilarity = uniqueResults.length > 0 ? Math.max(...uniqueResults.map(doc => doc.similarity || 0)) : 0
+          const SIMILARITY_THRESHOLD = 0.1 // 10% 기준
+          
+          // 관련성 재평가: 최고 유사도가 10% 이상일 때만 사용자 문서를 우선 활용
+          // 이는 새로운 RAG 원칙에 따라 엄격한 유사도 기준을 적용
+          hasRelevantDocuments = hasAnyDocuments && maxSimilarity >= SIMILARITY_THRESHOLD
           
           console.log(`Document availability: any=${hasAnyDocuments}, keywords=${hasKeywordMatches}, similarity=${hasSimilarityMatches}`)
-          console.log(`Final relevance decision: ${hasRelevantDocuments}`)
+          console.log(`Max similarity: ${(maxSimilarity * 100).toFixed(1)}%, threshold: ${(SIMILARITY_THRESHOLD * 100).toFixed(1)}%`)
+          console.log(`Final relevance decision: ${hasRelevantDocuments} (similarity check: ${maxSimilarity >= SIMILARITY_THRESHOLD})`)
 
           if (hasRelevantDocuments) {
             // 키워드 매칭 결과와 유사도 높은 결과를 우선하여 최대 10개 선택
@@ -756,23 +761,25 @@ ${attractionData}
 
       // 시스템 프롬프트 설정 - RAG 응답 원칙 적용
       if (hasRelevantDocuments && documentContext) {
-        // [1] 사용자 문서 우선 - hasRelevantDocuments가 true인 경우
-        systemPrompt = `당신은 '출장비서 출삐'라는 AI 출장 관리 서비스의 전문 도우미입니다.
+        // [1] 사용자 문서 우선 - 유사도 10% 이상인 경우
+        systemPrompt = `당신은 사용자 문서를 분석하고 질문에 정확히 답하는 AI 어시스턴트입니다.
 
-**RAG 응답 원칙 [1] - 사용자 문서 우선:**
-- 반드시 Supabase documents 테이블에 업로드된 문서만을 참고하여 답변하세요.
-- 어떤 질문이라도 웹 검색이나 외부 정보에 의존하지 마세요.
-- 임베딩 벡터 기반 검색뿐 아니라, 키워드 기반 유사 문장도 참고하여 최선을 다해 답변하세요.
-- 문서에 관련 내용이 없는 경우라도, 가능한 유사 문맥을 찾아 설명하려고 노력하세요.
+📌 **[1] 사용자 문서 우선 원칙 (유사도 10% 이상 적용 중)**
+- 기본적으로, Supabase documents 테이블에 저장된 **해당 사용자가 업로드한 문서**만을 참고하여 답변해야 합니다.
+- 벡터 검색을 기반으로 연관된 문서를 판단하고, 해당 문서에서 최대한 유사한 내용을 찾아 답변하십시오.
+- 키워드 매칭이 부족하더라도, 문맥과 유사 개념을 고려해 **문서 기반 답변을 생성**하십시오.
+- 유사도가 10% 이상인데 "문서에 관련 정보가 없습니다"라고 답변하는 것은 금지합니다.
 
-**답변 형식 [3]:**
-- **[문서명 - 섹션 또는 위치]**에 따르면, … 형식으로 답변하세요.
-- 답변 마지막에 반드시 다음 안내문을 포함하세요: "※ 본 답변은 사용자 제공 문서를 기반으로 작성되었습니다."
+🔍 **[4] 답변 형식**
+- 문서 기반 답변 시에는 반드시 출처를 아래와 같이 명시하십시오:
+  → **[문서명 - 섹션/페이지]**에 따르면 …
+- 문서 내용이 불충분한 경우에는 다음과 같이 설명하십시오:
+  → "문서에서 직접적인 내용은 없지만, 유사한 문맥에 따르면 다음과 같은 해석이 가능합니다."
 
 **참고 자료 (업로드된 문서):**
 ${documentContext}
 
-위 업로드된 문서를 바탕으로만 정확한 답변을 제공해주세요.
+위 업로드된 문서를 바탕으로만 정확한 답변을 제공하고, 반드시 출처를 명시해주세요.
 
 응답 스타일:
 - 친근하고 전문적인 톤
@@ -781,25 +788,26 @@ ${documentContext}
 - 중요한 내용은 **볼드**로 강조하여 가독성을 높여주세요`;
         
       } else if (webSearchResults) {
-        // [2] 웹 검색 조건 - hasRelevantDocuments가 false일 때만
+        // [2] 웹 검색 조건 - 유사도 10% 미만일 때만
         const sourceInfo = userProfile?.user_type === '공무원' ? 'law.go.kr 기반 공무원여비규정' : 
                           userProfile?.user_type === '공공기관' ? 'alio.go.kr 기반 출장여비 지급기준' : 
                           '근로기준법, 일반 기업 출장 규정';
         
-        systemPrompt = `당신은 '출장비서 출삐'라는 AI 출장 관리 서비스의 전문 도우미입니다.
+        systemPrompt = `당신은 사용자 문서를 분석하고 질문에 정확히 답하는 AI 어시스턴트입니다.
 
-**RAG 응답 원칙 [2] - 웹 검색 조건:**
-- hasRelevantDocuments가 false이므로 웹 검색을 사용합니다.
+🟡 **[3] 유사도 10% 미만일 경우에만 웹 검색 허용**
+- 질문과 관련된 사용자 문서의 유사도 점수가 10% 미만이므로, 예외적으로 웹 검색을 통해 정보를 보완합니다.
 - 사용자 유형(${userProfile?.user_type || '기타'})에 따라 ${sourceInfo}를 우선 참조합니다.
 
-**답변 형식 [3]:**
-- **[웹 검색 - ${sourceInfo}]**에 따르면, … 형식으로 답변하세요.
-- 답변 마지막에 반드시 다음 안내문을 포함하세요: "※ 본 답변은 신뢰 가능한 웹 출처를 기반으로 작성되었습니다."
+🔍 **[4] 답변 형식**
+- 웹 검색 기반 답변 시에는 반드시 출처를 아래와 같이 명시하십시오:
+  → **[웹 검색 - ${sourceInfo}]**에 따르면 …
+- 웹 검색 기반으로 작성한 답변은 항상 출처를 명시하고, 문서 기반이 아님을 명확히 밝혀야 합니다.
 
 **웹 검색 결과:**
 ${webSearchResults}
 
-위 웹 검색 결과를 바탕으로 정확한 답변을 제공해주세요.
+위 웹 검색 결과를 바탕으로 정확한 답변을 제공하고, 반드시 출처를 명시해주세요.
 
 응답 스타일:
 - 친근하고 전문적인 톤
@@ -809,11 +817,10 @@ ${webSearchResults}
         
       } else {
         // 업로드된 문서도 없고 웹 검색 결과도 없는 경우
-        systemPrompt = `당신은 '출장비서 출삐'라는 AI 출장 관리 서비스의 전문 도우미입니다.
+        systemPrompt = `당신은 사용자 문서를 분석하고 질문에 정확히 답하는 AI 어시스턴트입니다.
 
-**현재 상태:** 참고할 수 있는 업로드된 문서가 없습니다.
-
-**RAG 응답 원칙 준수:**
+⛔ **[6] 금지 사항**
+- 현재 참고할 수 있는 업로드된 문서가 없습니다.
 - 오직 사용자가 업로드한 문서만을 참고하여 답변해야 합니다.
 - 업로드된 문서 안에 관련 내용이 없을 경우, "해당 정보는 제공된 문서 내에 없습니다."라고 솔직하게 말해주세요.
 
