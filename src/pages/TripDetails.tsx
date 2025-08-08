@@ -478,23 +478,22 @@ export default function TripDetails() {
 
       {/* 지도 및 추천 장소 */}
       <Tabs defaultValue="checklist" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="checklist">체크리스트</TabsTrigger>
-          <TabsTrigger value="map">위치 및 기본 정보</TabsTrigger>
-          <TabsTrigger value="recommendations">블로거 추천</TabsTrigger>
+          <TabsTrigger value="map">위치 및 추천 정보</TabsTrigger>
         </TabsList>
         <TabsContent value="checklist" className="mt-6">
           <TripChecklist tripId={trip.id} tripStatus={trip.status} />
         </TabsContent>
         <TabsContent value="map" className="mt-6">
-          <TripDetailsMap 
-            destination={trip.destination}
-            latitude={coordinates?.lat}
-            longitude={coordinates?.lng}
-          />
-        </TabsContent>
-        <TabsContent value="recommendations" className="mt-6">
-          <DetailedRecommendations destination={trip.destination} />
+          <div className="space-y-6">
+            <TripDetailsMap 
+              destination={trip.destination}
+              latitude={coordinates?.lat}
+              longitude={coordinates?.lng}
+            />
+            <DetailedRecommendations destination={trip.destination} />
+          </div>
         </TabsContent>
       </Tabs>
 
