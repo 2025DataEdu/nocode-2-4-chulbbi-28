@@ -93,14 +93,18 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     setIsDragging(true)
     
     const startX = e.clientX
+    const startY = e.clientY
     const startWidth = chatbotSize.width
+    const startHeight = chatbotSize.height
     
     const handleMouseMove = (e: MouseEvent) => {
-      // 오른쪽으로 드래그하면 크기가 커지도록
       const deltaX = e.clientX - startX
-      const newWidth = Math.min(Math.max(startWidth + deltaX, 280), window.innerWidth * 0.8)
+      const deltaY = e.clientY - startY
       
-      setChatbotSize(prev => ({ ...prev, width: newWidth }))
+      const newWidth = Math.min(Math.max(startWidth + deltaX, 280), window.innerWidth * 0.8)
+      const newHeight = Math.min(Math.max(startHeight + deltaY, 400), window.innerHeight * 0.8)
+      
+      setChatbotSize({ width: newWidth, height: newHeight })
     }
     
     const handleMouseUp = () => {
@@ -428,15 +432,15 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
         className={cardClassName} 
         style={cardStyle}
       >
-        {/* 오른쪽 리사이즈 핸들 (floating 모드일 때만) */}
+        {/* 오른쪽 아래 모서리 리사이즈 핸들 (floating 모드일 때만) */}
         {position === 'floating' && (
           <div
-            className={`absolute top-0 right-0 w-1 h-full cursor-ew-resize bg-primary/20 hover:bg-primary/40 transition-colors group ${isDragging ? 'bg-primary/60' : ''}`}
+            className={`absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-primary/40 hover:bg-primary/60 transition-colors group rounded-tl-md ${isDragging ? 'bg-primary/80' : ''}`}
             onMouseDown={handleResizeStart}
-            title="창 크기 조절 (좌우로 드래그)"
+            title="창 크기 조절 (대각선으로 드래그)"
           >
-            <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 w-3 h-8 bg-primary/60 rounded-l-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <GripVertical className="h-3 w-3 text-primary-foreground" />
+            <div className="absolute bottom-0 right-0 w-full h-full flex items-end justify-end p-0.5">
+              <div className="w-2 h-2 border-r-2 border-b-2 border-primary-foreground/60"></div>
             </div>
           </div>
         )}
