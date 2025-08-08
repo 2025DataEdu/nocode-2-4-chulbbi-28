@@ -198,14 +198,14 @@ export default function Register() {
         trip_type: (formData.tripType === 'internal' ? '관내' : '관외') as '관내' | '관외',
         transportation: formData.transport === 'other' ? (formData.customTransport?.trim() || '기타') : transportOptions.find(opt => opt.value === formData.transport)?.label,
         accommodation_needed: formData.accommodationNeeded,
+        distance_km: addressCalculation?.distanceKm || (travelInfo ? extractDistanceKm(travelInfo.distance) : null),
+        budget: safeParseNumber(formData.budget),
+        notes: formData.specialRequirements?.trim() || null,
         accommodation_info: formData.accommodationNeeded ? {
-          type: formData.accommodationType || '호텔',
-          details: formData.accommodationDetails?.trim() || ''
+          type: formData.accommodationType,
+          details: formData.accommodationDetails
         } : null,
-        distance_km: travelInfo?.distance ? extractDistanceKm(travelInfo.distance) : null,
-        budget: Math.max(0, Number(formData.budget) || 0),
-        status: 'planned' as 'planned' | 'ongoing' | 'completed' | 'cancelled',
-        notes: formData.specialRequirements?.trim() || null
+        status: 'planned' as 'planned' | 'ongoing' | 'completed' | 'cancelled'
       }
 
       const { data: savedTrip, error } = await supabase
