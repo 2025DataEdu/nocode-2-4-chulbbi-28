@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MessageSquare, Send, X, Bot, User, RotateCcw, ChevronDown, Move } from "lucide-react"
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
+import { MessageSquare, Send, X, Bot, User, RotateCcw, ChevronDown, Move, GripVertical } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/useAuth"
@@ -81,30 +82,30 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
     }
   }, [isOpen])
 
-  // 리사이즈 기능
+  // 리사이즈 기능 - 더 나은 드래그 경험을 위한 상태
+  const [isDragging, setIsDragging] = useState(false)
+  
   const handleResizeStart = (e: React.MouseEvent) => {
     if (position !== 'floating') return
     
     e.preventDefault()
     setIsResizing(true)
+    setIsDragging(true)
     
     const startX = e.clientX
-    const startY = e.clientY
     const startWidth = chatbotSize.width
-    const startHeight = chatbotSize.height
     
     const handleMouseMove = (e: MouseEvent) => {
+      // 오른쪽에서 왼쪽으로 드래그하면 크기가 커지도록
       const deltaX = startX - e.clientX
-      const deltaY = startY - e.clientY
+      const newWidth = Math.min(Math.max(startWidth + deltaX, 280), window.innerWidth * 0.8)
       
-      const newWidth = Math.min(Math.max(startWidth + deltaX, 280), window.innerWidth - 50)
-      const newHeight = Math.min(Math.max(startHeight + deltaY, 400), window.innerHeight - 50)
-      
-      setChatbotSize({ width: newWidth, height: newHeight })
+      setChatbotSize(prev => ({ ...prev, width: newWidth }))
     }
     
     const handleMouseUp = () => {
       setIsResizing(false)
+      setIsDragging(false)
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
@@ -421,33 +422,53 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
   } : undefined
 
   return (
-    <Card ref={chatbotRef} className={cardClassName} style={cardStyle}>
-      {/* 리사이즈 핸들 (floating 모드일 때만) */}
-      {position === 'floating' && (
-        <div
-          className="absolute top-0 left-0 w-4 h-4 cursor-nw-resize bg-muted/50 hover:bg-muted border-r border-b border-border z-10 flex items-center justify-center"
-          onMouseDown={handleResizeStart}
-          title="창 크기 조절"
-        >
-          <Move className="h-3 w-3 text-muted-foreground" />
-        </div>
-      )}
-      
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-primary text-primary-foreground rounded-t-lg flex-shrink-0">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Bot className="h-4 w-4" />
-          출장비서 출삐
-        </CardTitle>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleClearChat}
-          className="h-6 w-6 p-0 hover:bg-white/20"
-          title="대화 새로고침"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-      </CardHeader>
+    <div className={position === 'floating' ? 'fixed bottom-4 right-4 z-50' : 'w-full h-full'}>
+      <Card 
+        ref={chatbotRef} 
+        className={cardClassName} 
+        style={cardStyle}
+      >
+        {/* 왼쪽 리사이즈 핸들 (floating 모드일 때만) */}
+        {position === 'floating' && (
+          <div
+            className={`absolute top-0 left-0 w-1 h-full cursor-ew-resize bg-primary/20 hover:bg-primary/40 transition-colors group ${isDragging ? 'bg-primary/60' : ''}`}
+            onMouseDown={handleResizeStart}
+            title="창 크기 조절 (좌우로 드래그)"
+          >
+            <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1/2 w-3 h-8 bg-primary/60 rounded-r-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <GripVertical className="h-3 w-3 text-primary-foreground" />
+            </div>
+          </div>
+        )}
+        
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-primary text-primary-foreground rounded-t-lg flex-shrink-0">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            출장비서 출삐
+          </CardTitle>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearChat}
+              className="h-6 w-6 p-0 hover:bg-white/20"
+              title="대화 새로고침"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+            {position === 'floating' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setInternalIsOpen(false)}
+                className="h-6 w-6 p-0 hover:bg-white/20"
+                title="닫기"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardHeader>
 
       <CardContent className="flex-1 flex flex-col p-0 relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div 
@@ -561,6 +582,7 @@ export function Chatbot({ isOpen: externalIsOpen, onClose: externalOnClose, posi
           </div>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   )
 }
