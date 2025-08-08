@@ -89,8 +89,8 @@ export default function Register() {
         return
       }
 
-      const depLabel = locations.find(l => l.value === formData.departure)?.label || formData.departure
-      const destLabel = locations.find(l => l.value === formData.destination)?.label || formData.destination
+      const depLabel = formData.departure
+      const destLabel = formData.destination
 
       // 1) 프리셋 및 주소 기반 모두 계산 (주소 기반이 있으면 우선 사용)
       const preset = calculateDistanceUtil(formData.departure, formData.destination)
@@ -242,8 +242,8 @@ export default function Register() {
 
       const tripData = {
         user_id: user.id,
-        destination: locations.find(loc => loc.value === formData.destination)?.label || formData.destination,
-        departure_location: locations.find(loc => loc.value === formData.departure)?.label || formData.departure,
+        destination: formData.destination,
+        departure_location: formData.departure,
         purpose: formData.purpose.trim(),
         start_date: formData.startDate,
         end_date: formData.isDayTrip ? formData.startDate : (formData.endDate || formData.startDate),
@@ -324,18 +324,13 @@ export default function Register() {
                   <MapPin className="w-4 h-4" />
                   출발지
                 </Label>
-                <Select value={formData.departure} onValueChange={(value) => setFormData({ ...formData, departure: value })}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="출발지를 선택해주세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((location) => (
-                      <SelectItem key={location.value} value={location.value}>
-                        {location.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="departure"
+                  placeholder="출발지를 입력해주세요 (예: 서울특별시 중구)"
+                  value={formData.departure}
+                  onChange={(e) => setFormData({ ...formData, departure: e.target.value })}
+                  className="mt-2"
+                />
               </div>
 
               <div>
@@ -343,18 +338,13 @@ export default function Register() {
                   <MapPin className="w-4 h-4" />
                   출장지
                 </Label>
-                <Select value={formData.destination} onValueChange={(value) => setFormData({ ...formData, destination: value })}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="출장지를 선택해주세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((location) => (
-                      <SelectItem key={location.value} value={location.value}>
-                        {location.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="destination"
+                  placeholder="출장지를 입력해주세요 (예: 부산광역시 해운대구)"
+                  value={formData.destination}
+                  onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                  className="mt-2"
+                />
               </div>
 
               <div>
@@ -571,8 +561,8 @@ export default function Register() {
                       장소 정보
                     </h4>
                     <div className="space-y-2 text-sm">
-                      <p><strong>출발지:</strong> {locations.find(loc => loc.value === formData.departure)?.label || formData.departure || '미선택'}</p>
-                      <p><strong>출장지:</strong> {locations.find(loc => loc.value === formData.destination)?.label || formData.destination || '미선택'}</p>
+                      <p><strong>출발지:</strong> {formData.departure || '미입력'}</p>
+                      <p><strong>출장지:</strong> {formData.destination || '미입력'}</p>
                       <p><strong>출장 목적:</strong> {formData.purpose || '미입력'}</p>
                       <p><strong>출장 유형:</strong> {formData.tripType === 'internal' ? '관내' : formData.tripType === 'external' ? '관외' : '미선택'}</p>
                       {travelInfo && (
