@@ -3,7 +3,7 @@
  */
 
 // 디바운스 함수
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -15,7 +15,7 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // 스로틀 함수
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -30,7 +30,7 @@ export function throttle<T extends (...args: any[]) => any>(
 }
 
 // 메모이제이션 유틸리티
-export function memoize<T extends (...args: any[]) => any>(func: T): T {
+export function memoize<T extends (...args: unknown[]) => unknown>(func: T): T {
   const cache = new Map();
   return ((...args: Parameters<T>) => {
     const key = JSON.stringify(args);

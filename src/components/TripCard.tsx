@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { safeParseNumber } from "@/utils/validation"
 import { normalizeRegion } from "@/utils/distance"
+import { isValidDateString, isValidNumber } from "@/utils/typeGuards"
 
 interface TripCardProps {
   id: string
@@ -71,6 +72,12 @@ export function TripCard({
         setAllowanceData(allowance);
         
         // 출장 일수 계산 (안전한 날짜 처리)
+        if (!isValidDateString(start_date) || !isValidDateString(end_date)) {
+          console.warn('Invalid date strings in TripCard:', { start_date, end_date });
+          setEstimatedBudget(0);
+          return;
+        }
+
         const startDate = new Date(start_date);
         const endDate = new Date(end_date);
         
@@ -82,9 +89,20 @@ export function TripCard({
         const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
         
         // 예상 예산 계산 (안전한 숫자 변환)
-        const mealCost = safeParseNumber(allowance.daily_meal_allowance) * daysDiff;
-        const lodgingCost = safeParseNumber(allowance.daily_lodging_allowance) * Math.max(0, daysDiff - 1);
-        const transportCost = safeParseNumber(distance_km) * safeParseNumber(allowance.transportation_rate_per_km) * 2;
+        const mealAllowance = isValidNumber(allowance.daily_meal_allowance) 
+          ? allowance.daily_meal_allowance 
+          : 0;
+        const lodgingAllowance = isValidNumber(allowance.daily_lodging_allowance) 
+          ? allowance.daily_lodging_allowance 
+          : 0;
+        const transportRate = isValidNumber(allowance.transportation_rate_per_km) 
+          ? allowance.transportation_rate_per_km 
+          : 0;
+        const distanceKm = isValidNumber(distance_km) ? distance_km : 0;
+
+        const mealCost = mealAllowance * daysDiff;
+        const lodgingCost = lodgingAllowance * Math.max(0, daysDiff - 1);
+        const transportCost = distanceKm * transportRate * 2;
         
         const totalEstimated = mealCost + lodgingCost + transportCost;
         setEstimatedBudget(Math.max(0, totalEstimated));

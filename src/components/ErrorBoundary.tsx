@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { analytics } from '@/utils/analytics'
+import { setupGlobalErrorHandlers, formatErrorInfo, getErrorRecoveryAction } from '@/utils/errorBoundary'
 
 interface Props {
   children: ReactNode
@@ -18,6 +19,9 @@ export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
     this.state = { hasError: false }
+    
+    // 전역 에러 핸들러 설정
+    setupGlobalErrorHandlers();
   }
 
   static getDerivedStateFromError(error: Error): State {
@@ -25,13 +29,17 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
+    const formattedError = formatErrorInfo(error, errorInfo);
+    const recoveryAction = getErrorRecoveryAction(error);
+    
+    console.error('ErrorBoundary caught an error:', formattedError);
     
     // Analytics로 에러 추적
     analytics.trackError(error, 'ErrorBoundary', {
       componentStack: errorInfo.componentStack,
-      errorBoundary: true
-    })
+      errorBoundary: true,
+      recovery_action: recoveryAction
+    });
   }
 
   handleReset = () => {

@@ -14,7 +14,7 @@ interface UseAsyncOperationOptions {
  * 비동기 작업을 처리하기 위한 커스텀 훅
  * 로딩 상태, 에러 처리, 토스트 메시지를 자동으로 관리
  */
-export function useAsyncOperation<T extends any[], R>(
+export function useAsyncOperation<T extends unknown[], R>(
   operation: (...args: T) => Promise<R>,
   options: UseAsyncOperationOptions = {}
 ) {

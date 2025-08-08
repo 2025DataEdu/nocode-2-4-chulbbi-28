@@ -9,8 +9,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { TopNavigation } from "@/components/TopNavigation";
+import { Tables } from "@/integrations/supabase/types";
+import { isValidTrip, isValidDateString } from "@/utils/typeGuards";
 export function Dashboard() {
-  const [trips, setTrips] = useState<any[]>([]);
+  const [trips, setTrips] = useState<Tables<'trips'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'ongoing' | 'planned' | 'completed' | 'all'>('ongoing');
   const {
@@ -58,7 +60,9 @@ export function Dashboard() {
         throw error;
       }
       
-      setTrips(Array.isArray(data) ? data : []);
+      // 데이터 유효성 검사 후 설정
+      const validTrips = Array.isArray(data) ? data.filter(isValidTrip) : [];
+      setTrips(validTrips);
     } catch (error: any) {
       console.error('Error fetching trips:', error);
       toast({
@@ -73,7 +77,13 @@ export function Dashboard() {
   };
 
   // 현재 날짜 기준으로 출장 상태 계산 (한국시간 기준)
-  const calculateTripStatus = (startDate: string, endDate: string) => {
+  const calculateTripStatus = (startDate: string, endDate: string): 'planned' | 'ongoing' | 'completed' => {
+    // 날짜 유효성 검사
+    if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
+      console.warn('Invalid date strings:', { startDate, endDate });
+      return 'planned'; // 기본값
+    }
+
     const today = new Date();
     // 한국시간으로 변환 (UTC+9)
     const koreanOffset = 9 * 60;
