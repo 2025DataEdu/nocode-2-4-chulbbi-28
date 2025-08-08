@@ -508,19 +508,30 @@ async function getAccommodationRecommendations(message: string) {
     let result = `**${searchLocation} 주변 추천 숙소:**\n\n`;
     
     recommendedAccommodations.forEach((acc, index) => {
+      const hotelName = acc.사업장명;
+      const encodedHotelName = encodeURIComponent(hotelName);
+      
       result += `**${index + 1}. ${acc.사업장명}**\n`;
       result += `- 업태: ${acc.위생업태명 || '정보없음'}\n`;
       result += `- 주소: ${acc.도로명전체주소 || acc.소재지전체주소 || '주소정보없음'}\n`;
       if (acc.소재지전화) {
         result += `- 전화: ${acc.소재지전화}\n`;
       }
+      
+      // 예약 사이트 링크 추가
+      result += `- **예약하기:**\n`;
+      result += `  • [여기어때에서 검색](https://www.goodchoice.kr/product/search?keyword=${encodedHotelName})\n`;
+      result += `  • [야놀자에서 검색](https://www.yanolja.com/search/${encodedHotelName})\n`;
+      result += `  • [부킹닷컴에서 검색](https://www.booking.com/searchresults.html?ss=${encodedHotelName})\n`;
       result += `\n`;
     });
 
     if (moreAccommodations.length > 0) {
       result += `\n**추가 숙소 옵션 (${moreAccommodations.length}개):**\n`;
       moreAccommodations.slice(0, 10).forEach((acc, index) => {
+        const encodedHotelName = encodeURIComponent(acc.사업장명);
         result += `${index + 6}. ${acc.사업장명} (${acc.위생업태명 || '정보없음'})\n`;
+        result += `   • [여기어때](https://www.goodchoice.kr/product/search?keyword=${encodedHotelName}) | [야놀자](https://www.yanolja.com/search/${encodedHotelName}) | [부킹닷컴](https://www.booking.com/searchresults.html?ss=${encodedHotelName})\n`;
       });
       
       if (moreAccommodations.length > 10) {
