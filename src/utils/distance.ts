@@ -191,7 +191,7 @@ export function calculateDistance(departure: string, destination: string): Dista
                     REGION_DISTANCES[destRegion]?.[depRegion] || 
                     300; // 기본값
   
-  const hours = Math.round(distanceKm / 80); // 평균 속도 80km/h
+  const hours = Math.floor(distanceKm / 80); // 평균 속도 80km/h
   const minutes = Math.round((distanceKm / 80 - hours) * 60);
   
   const durationText = hours > 0 
