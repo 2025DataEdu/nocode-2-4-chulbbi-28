@@ -31,13 +31,6 @@ export function AppSidebar() {
   const collapsed = state === "collapsed"
   const isMobile = useIsMobile()
 
-  const isActive = (path: string) => currentPath === path
-  const isExpanded = navigationItems.some((item) => isActive(item.url))
-
-  const getNavClassName = ({ isActive }: { isActive: boolean }) =>
-    isActive 
-      ? "bg-gradient-primary text-primary-foreground shadow-soft" 
-      : "hover:bg-muted/60 transition-smooth"
 
   return (
     <Sidebar className={`${collapsed ? "w-14 sm:w-16" : "w-48 sm:w-64"} transition-smooth border-r border-border bg-card`}>
@@ -74,14 +67,17 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url} 
                       end 
-                      className={getNavClassName}
+                      className={({ isActive }) => 
+                        `flex items-center gap-3 p-2 rounded-lg w-full ${isActive 
+                          ? "bg-gradient-primary text-primary-foreground shadow-soft" 
+                          : "hover:bg-muted/60 transition-smooth"
+                        }`
+                      }
                     >
-                      <div className="flex items-center gap-3 p-2 rounded-lg w-full">
-                        <item.icon className="h-4 w-4" />
-                        {!collapsed && (
-                          <span className="font-medium">{item.title}</span>
-                        )}
-                      </div>
+                      <item.icon className="h-4 w-4" />
+                      {!collapsed && (
+                        <span className="font-medium">{item.title}</span>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -94,7 +90,7 @@ export function AppSidebar() {
         <div className="mt-8 pt-6 border-t border-border">
           <button
             onClick={() => setIsChatbotOpen(true)}
-            className={`w-full p-3 rounded-lg bg-gradient-accent transition-smooth hover:shadow-soft ${collapsed ? "mx-auto w-fit" : ""}`}
+            className={`w-full p-3 rounded-lg bg-accent text-accent-foreground transition-smooth hover:bg-accent-hover hover:shadow-md ${collapsed ? "mx-auto w-fit" : ""}`}
           >
             {!collapsed ? (
               <div className="text-center">

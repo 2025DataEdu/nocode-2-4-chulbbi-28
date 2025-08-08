@@ -37,9 +37,8 @@ const NotFound = () => {
           <Button 
             asChild
             variant="default"
-            className="flex items-center gap-2"
           >
-            <Link to="/">
+            <Link to="/" className="flex items-center gap-2">
               <Home className="h-4 w-4" />
               홈으로 가기
             </Link>
