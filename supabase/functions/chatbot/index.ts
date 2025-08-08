@@ -232,9 +232,9 @@ async function performWebSearch(query: string, userType: string): Promise<string
     
     // 사용자 유형에 따른 검색 쿼리 조정
     if (userType === '공무원') {
-      searchQuery = `${query} 공무원 출장 여비 규정 site:law.go.kr`;
+      searchQuery = `${query} 여비 site:law.go.kr`;
     } else if (userType === '공공기관') {
-      searchQuery = `${query} 공공기관 출장 여비 규정 site:alio.go.kr`;
+      searchQuery = `${query} 여비 site:alio.go.kr`;
     } else {
       searchQuery = `${query} 출장 여비 규정`;
     }
