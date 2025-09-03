@@ -733,6 +733,7 @@ serve(async (req) => {
     }
 
     if (!openAIApiKey) {
+      console.error('OPENAI_API_KEY is not configured');
       return new Response(JSON.stringify({ error: 'OPENAI_API_KEY is not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
